@@ -1,4 +1,9 @@
 [[redirects]]
+  from = "/"
+  to = "/landingpage.tzx"
+  status = 200
+
+[[redirects]]
   from = "/*"
-  to = "/index.html"
+  to = "/landingpage.tzx"
   status = 200
