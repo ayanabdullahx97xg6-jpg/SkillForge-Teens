@@ -4,9 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SkillForge Teens</title>
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- React & Babel Core -->
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -14,14 +12,22 @@
   <body class="bg-slate-900 text-white min-h-screen">
     <div id="root"></div>
 
-    <script type="text/babel" data-presets="react,typescript">
+    <script type="text/babel">
       function App() {
         return (
           <div className="flex flex-col items-center justify-center min-h-screen p-6 text-center">
             <h1 className="text-5xl font-extrabold text-blue-500 mb-4">SkillForge Teens</h1>
-            <p className="text-xl text-slate-300 max-w-md">
-              Aapka platform live ho chuka hai! Ab aap yahan apne components integrate kar sakte hain.
+            <p className="text-xl text-slate-300 max-w-lg mb-6">
+              Welcome to SkillForge Teens! Aapka learning platform ab successfully live ho chuka hai.
             </p>
+            <div className="flex gap-4">
+              <button className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition">
+                Get Started
+              </button>
+              <button className="border border-slate-600 hover:bg-slate-800 text-white font-bold py-2 px-6 rounded-lg transition">
+                Explore Courses
+              </button>
+            </div>
           </div>
         );
       }
