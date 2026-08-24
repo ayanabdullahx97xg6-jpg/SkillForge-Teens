@@ -10,7 +10,11 @@
   "dependencies": {
     "@clerk/react": "latest",
     "react": "18.3.1",
-    "react-dom": "18.3.1"
+    "react-dom": "18.3.1",
+    "lucide-react": "latest",
+    "tailwindcss": "^3.3.0",
+    "postcss": "^8.4.0",
+    "autoprefixer": "^10.4.0"
   },
   "devDependencies": {
     "@types/react": "18.3.5",
