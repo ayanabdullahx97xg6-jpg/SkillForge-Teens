@@ -1,14 +1,25 @@
-import React, { useState } from 'react';
-import { Shield, Sparkles, Mail, Bot, ArrowRight, Star } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Shield, Sparkles, Mail, Bot, ArrowRight, Star, CheckCircle } from 'lucide-react';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('home');
   
-  // Login Form State
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
+  // Persistent User State using localStorage
+  const [username, setUsername] = useState(() => localStorage.getItem('skillforge_username') || '');
+  const [email, setEmail] = useState(() => localStorage.getItem('skillforge_email') || '');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
+
+  // Persistent Course Progress State
+  const [progress, setProgress] = useState(() => {
+    const savedProgress = localStorage.getItem('skillforge_progress');
+    return savedProgress ? JSON.parse(savedProgress) : {
+      cybersecurity: 12,
+      animation: 7,
+      storytelling: 0,
+      aiTools: 3
+    };
+  });
 
   // Support Form State
   const [supportName, setSupportName] = useState('');
@@ -17,6 +28,11 @@ export default function App() {
   const [supportMessage, setSupportMessage] = useState('');
   const [supportSuccess, setSupportSuccess] = useState(false);
 
+  // Save progress to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('skillforge_progress', JSON.stringify(progress));
+  }, [progress]);
+
   const handleLogin = (e) => {
     e.preventDefault();
     if (!username.trim() || !email.trim() || !password.trim()) {
@@ -24,7 +40,25 @@ export default function App() {
       return;
     }
     setLoginError('');
+    localStorage.setItem('skillforge_username', username.trim());
+    localStorage.setItem('skillforge_email', email.trim());
     setCurrentPage('dashboard');
+  };
+
+  const handleLogout = () => {
+    setUsername('');
+    setEmail('');
+    localStorage.removeItem('skillforge_username');
+    localStorage.removeItem('skillforge_email');
+    setCurrentPage('home');
+  };
+
+  const updateProgress = (courseKey) => {
+    setProgress((prev) => {
+      const currentVal = prev[courseKey];
+      const newVal = currentVal >= 100 ? 100 : currentVal + 10;
+      return { ...prev, [courseKey]: newVal };
+    });
   };
 
   const handleSupportSubmit = (e) => {
@@ -55,8 +89,13 @@ export default function App() {
           <button onClick={() => setCurrentPage('resources')} className={`hover:text-[#00f2fe] transition-colors ${currentPage === 'resources' ? 'text-[#00f2fe]' : ''}`}>Resources</button>
           <button onClick={() => setCurrentPage('support')} className={`hover:text-[#00f2fe] transition-colors ${currentPage === 'support' ? 'text-[#00f2fe]' : ''}`}>Support</button>
           
-          {currentPage === 'dashboard' ? (
-            <button onClick={() => { setCurrentPage('home'); setUsername(''); }} className="px-4 py-2 rounded-xl bg-[#121824] border border-slate-800 hover:border-[#00f2fe] transition-all text-xs font-semibold text-[#00f2fe]">Logout</button>
+          {username ? (
+            <div className="flex items-center gap-4">
+              <button onClick={() => setCurrentPage('dashboard')} className={`text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-800 ${currentPage === 'dashboard' ? 'border-[#00f2fe] text-[#00f2fe]' : 'text-slate-300'}`}>
+                Hi, {username}
+              </button>
+              <button onClick={handleLogout} className="px-4 py-2 rounded-xl bg-[#121824] border border-slate-800 hover:border-[#00f2fe] transition-all text-xs font-semibold text-[#00f2fe]">Logout</button>
+            </div>
           ) : (
             <button onClick={() => setCurrentPage('login')} className={`px-4 py-2 rounded-xl bg-[#121824] border border-slate-800 hover:border-[#00f2fe] transition-all text-xs font-semibold ${currentPage === 'login' ? 'border-[#00f2fe] text-[#00f2fe]' : ''}`}>Login</button>
           )}
@@ -167,22 +206,34 @@ export default function App() {
               <div className="p-8 rounded-2xl bg-[#121824] border border-slate-800/80 hover:border-slate-700 transition-all">
                 <div className="text-[#00f2fe] mb-6"><Shield className="w-8 h-8" /></div>
                 <h3 className="text-2xl font-bold text-white mb-3">Cybersecurity & Safety</h3>
-                <p className="text-slate-400 leading-relaxed">Practice smart digital habits, spot red flags, and protect the spaces you care about.</p>
+                <p className="text-slate-400 leading-relaxed mb-6">Practice smart digital habits, spot red flags, and protect the spaces you care about.</p>
+                <button onClick={() => { if(!username) { setCurrentPage('login'); } else { updateProgress('cybersecurity'); setCurrentPage('dashboard'); }}} className="px-5 py-2.5 bg-[#00f2fe] text-black font-semibold text-sm rounded-xl hover:bg-[#00dfed] transition-all">
+                  Enroll & Track Progress
+                </button>
               </div>
               <div className="p-8 rounded-2xl bg-[#121824] border border-slate-800/80 hover:border-slate-700 transition-all">
                 <div className="text-[#00f2fe] mb-6"><Sparkles className="w-8 h-8" /></div>
                 <h3 className="text-2xl font-bold text-white mb-3">2D/3D Animation</h3>
-                <p className="text-slate-400 leading-relaxed">Bring original characters, worlds, and motion graphics to life from your own point of view.</p>
+                <p className="text-slate-400 leading-relaxed mb-6">Bring original characters, worlds, and motion graphics to life from your own point of view.</p>
+                <button onClick={() => { if(!username) { setCurrentPage('login'); } else { updateProgress('animation'); setCurrentPage('dashboard'); }}} className="px-5 py-2.5 bg-[#00f2fe] text-black font-semibold text-sm rounded-xl hover:bg-[#00dfed] transition-all">
+                  Enroll & Track Progress
+                </button>
               </div>
               <div className="p-8 rounded-2xl bg-[#121824] border border-slate-800/80 hover:border-slate-700 transition-all">
                 <div className="text-[#00f2fe] mb-6"><Mail className="w-8 h-8" /></div>
                 <h3 className="text-2xl font-bold text-white mb-3">Digital Storytelling</h3>
-                <p className="text-slate-400 leading-relaxed">Shape stories people remember — from shorts and podcasts to interactive worlds.</p>
+                <p className="text-slate-400 leading-relaxed mb-6">Shape stories people remember — from shorts and podcasts to interactive worlds.</p>
+                <button onClick={() => { if(!username) { setCurrentPage('login'); } else { updateProgress('storytelling'); setCurrentPage('dashboard'); }}} className="px-5 py-2.5 bg-[#00f2fe] text-black font-semibold text-sm rounded-xl hover:bg-[#00dfed] transition-all">
+                  Enroll & Track Progress
+                </button>
               </div>
               <div className="p-8 rounded-2xl bg-[#121824] border border-slate-800/80 hover:border-slate-700 transition-all">
                 <div className="text-[#00f2fe] mb-6"><Bot className="w-8 h-8" /></div>
                 <h3 className="text-2xl font-bold text-white mb-3">Tech & AI Tools</h3>
-                <p className="text-slate-400 leading-relaxed">Experiment responsibly with the tools shaping tomorrow and build with purpose.</p>
+                <p className="text-slate-400 leading-relaxed mb-6">Experiment responsibly with the tools shaping tomorrow and build with purpose.</p>
+                <button onClick={() => { if(!username) { setCurrentPage('login'); } else { updateProgress('aiTools'); setCurrentPage('dashboard'); }}} className="px-5 py-2.5 bg-[#00f2fe] text-black font-semibold text-sm rounded-xl hover:bg-[#00dfed] transition-all">
+                  Enroll & Track Progress
+                </button>
               </div>
             </div>
           </div>
@@ -312,7 +363,7 @@ export default function App() {
               <div>
                 <input 
                   type="text" 
-                  placeholder="Username" 
+                  placeholder="Username (e.g. David)" 
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="w-full bg-[#0b0f17] border border-slate-800 rounded-xl px-4 py-3.5 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-[#00f2fe] text-sm" 
@@ -339,10 +390,7 @@ export default function App() {
               
               <div className="pt-2 space-y-3">
                 <button type="submit" className="w-full py-4 bg-[#00f2fe] text-black font-bold rounded-xl hover:bg-[#00dfed] transition-all text-center shadow-lg shadow-[#00f2fe]/10">
-                  Continue
-                </button>
-                <button type="button" onClick={handleLogin} className="w-full py-4 bg-[#a78bfa] text-black font-bold rounded-xl hover:bg-[#9061f9] transition-all text-center">
-                  Personalize my learning path
+                  Continue to Dashboard
                 </button>
               </div>
             </form>
@@ -355,40 +403,68 @@ export default function App() {
             <div className="p-6 rounded-2xl bg-[#121824] border border-slate-800/80 flex flex-col md:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-xl bg-[#00f2fe]/20 text-[#00f2fe] flex items-center justify-center font-bold text-xl border border-[#00f2fe]/40">
-                  {username ? username.charAt(0).toUpperCase() : 'A'}
+                  {username ? username.charAt(0).toUpperCase() : 'D'}
                 </div>
-                <div><h2 className="text-xl font-bold text-white">{username ? `${username}'s SkillForge` : "Ayan's SkillForge"}</h2></div>
+                <div>
+                  <h2 className="text-xl font-bold text-white">{username ? `${username}'s SkillForge` : "David's SkillForge"}</h2>
+                  <p className="text-xs text-slate-400 mt-0.5">{email || "david@example.com"}</p>
+                </div>
               </div>
               <div className="px-5 py-2 rounded-full border border-[#00f2fe]/40 bg-[#00f2fe]/10 text-[#00f2fe] font-mono text-xs font-semibold tracking-wider">
-                LEVEL 1 / 100
+                ACTIVE SESSION SAVED
               </div>
             </div>
 
             <div className="p-6 rounded-2xl bg-[#121824] border border-slate-800/80 space-y-4">
               <h3 className="text-xl font-bold text-white">Your forge progress</h3>
               <div className="w-full bg-slate-800 rounded-full h-3 overflow-hidden">
-                <div className="bg-[#00f2fe] h-full rounded-full w-[12%]"></div>
+                <div className="bg-[#00f2fe] h-full rounded-full transition-all duration-300" style={{ width: `${Math.min(100, (progress.cybersecurity + progress.animation + progress.storytelling + progress.aiTools) / 4)}%` }}></div>
               </div>
-              <p className="text-xs font-mono text-slate-400 tracking-wider">PROFESSIONAL CERTIFICATE UNLOCKED AT LEVEL 100</p>
+              <p className="text-xs font-mono text-slate-400 tracking-wider">PROGRESS IS SAVED LOCALLY FOR YOUR BROWSER SESSION</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              
               <div className="p-6 rounded-2xl bg-[#121824] border border-slate-800/80 space-y-4">
-                <div><h4 className="text-lg font-bold text-white">Cybersecurity & Safety</h4><p className="text-xs font-mono text-purple-400 mt-1">12% complete</p></div>
-                <button className="px-5 py-2.5 bg-[#00f2fe] text-black font-semibold text-sm rounded-xl hover:bg-[#00dfed] transition-all shadow-md shadow-[#00f2fe]/10">Continue Learning</button>
+                <div>
+                  <h4 className="text-lg font-bold text-white">Cybersecurity & Safety</h4>
+                  <p className="text-xs font-mono text-[#00f2fe] mt-1">{progress.cybersecurity}% complete</p>
+                </div>
+                <button onClick={() => updateProgress('cybersecurity')} className="px-5 py-2.5 bg-[#00f2fe] text-black font-semibold text-sm rounded-xl hover:bg-[#00dfed] transition-all shadow-md shadow-[#00f2fe]/15">
+                  Continue Learning (+10%)
+                </button>
               </div>
+
               <div className="p-6 rounded-2xl bg-[#121824] border border-slate-800/80 space-y-4">
-                <div><h4 className="text-lg font-bold text-white">2D/3D Animation</h4><p className="text-xs font-mono text-purple-400 mt-1">7% complete</p></div>
-                <button className="px-5 py-2.5 bg-[#00f2fe] text-black font-semibold text-sm rounded-xl hover:bg-[#00dfed] transition-all shadow-md shadow-[#00f2fe]/10">Continue Learning</button>
+                <div>
+                  <h4 className="text-lg font-bold text-white">2D/3D Animation</h4>
+                  <p className="text-xs font-mono text-[#00f2fe] mt-1">{progress.animation}% complete</p>
+                </div>
+                <button onClick={() => updateProgress('animation')} className="px-5 py-2.5 bg-[#00f2fe] text-black font-semibold text-sm rounded-xl hover:bg-[#00dfed] transition-all shadow-md shadow-[#00f2fe]/15">
+                  Continue Learning (+10%)
+                </button>
               </div>
+
               <div className="p-6 rounded-2xl bg-[#121824] border border-slate-800/80 space-y-4">
-                <div><h4 className="text-lg font-bold text-white">Digital Storytelling</h4><p className="text-xs font-mono text-purple-400 mt-1">0% complete</p></div>
-                <button className="px-5 py-2.5 bg-[#00f2fe] text-black font-semibold text-sm rounded-xl hover:bg-[#00dfed] transition-all shadow-md shadow-[#00f2fe]/10">Continue Learning</button>
+                <div>
+                  <h4 className="text-lg font-bold text-white">Digital Storytelling</h4>
+                  <p className="text-xs font-mono text-[#00f2fe] mt-1">{progress.storytelling}% complete</p>
+                </div>
+                <button onClick={() => updateProgress('storytelling')} className="px-5 py-2.5 bg-[#00f2fe] text-black font-semibold text-sm rounded-xl hover:bg-[#00dfed] transition-all shadow-md shadow-[#00f2fe]/15">
+                  Continue Learning (+10%)
+                </button>
               </div>
+
               <div className="p-6 rounded-2xl bg-[#121824] border border-slate-800/80 space-y-4">
-                <div><h4 className="text-lg font-bold text-white">Tech & AI Tools</h4><p className="text-xs font-mono text-purple-400 mt-1">3% complete</p></div>
-                <button className="px-5 py-2.5 bg-[#00f2fe] text-black font-semibold text-sm rounded-xl hover:bg-[#00dfed] transition-all shadow-md shadow-[#00f2fe]/10">Continue Learning</button>
+                <div>
+                  <h4 className="text-lg font-bold text-white">Tech & AI Tools</h4>
+                  <p className="text-xs font-mono text-[#00f2fe] mt-1">{progress.aiTools}% complete</p>
+                </div>
+                <button onClick={() => updateProgress('aiTools')} className="px-5 py-2.5 bg-[#00f2fe] text-black font-semibold text-sm rounded-xl hover:bg-[#00dfed] transition-all shadow-md shadow-[#00f2fe]/15">
+                  Continue Learning (+10%)
+                </button>
               </div>
+
             </div>
 
             <div className="p-8 rounded-2xl bg-[#121824] border border-slate-800/80 space-y-5">
