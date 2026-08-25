@@ -3,6 +3,42 @@ import { Shield, Sparkles, Mail, Bot, ArrowRight, Star } from 'lucide-react';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('home');
+  
+  // Login Form State
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+
+  // Support Form State
+  const [supportName, setSupportName] = useState('');
+  const [supportEmail, setSupportEmail] = useState('');
+  const [supportCategory, setSupportCategory] = useState('Login & Account Issues');
+  const [supportMessage, setSupportMessage] = useState('');
+  const [supportSuccess, setSupportSuccess] = useState(false);
+
+  const handleLogin = (e) => {
+    e.preventDefault();
+    if (!username.trim() || !email.trim() || !password.trim()) {
+      setLoginError('Please fill in all fields to continue.');
+      return;
+    }
+    setLoginError('');
+    setCurrentPage('dashboard');
+  };
+
+  const handleSupportSubmit = (e) => {
+    e.preventDefault();
+    if (!supportName.trim() || !supportEmail.trim() || !supportMessage.trim()) {
+      alert('Please fill in all fields before submitting your request.');
+      return;
+    }
+    setSupportSuccess(true);
+    setSupportName('');
+    setSupportEmail('');
+    setSupportMessage('');
+    setTimeout(() => setSupportSuccess(false), 5000);
+  };
 
   return (
     <div className="min-h-screen bg-[#0b0f17] text-slate-100 font-sans selection:bg-[#00f2fe] selection:text-black antialiased">
@@ -20,7 +56,7 @@ export default function App() {
           <button onClick={() => setCurrentPage('support')} className={`hover:text-[#00f2fe] transition-colors ${currentPage === 'support' ? 'text-[#00f2fe]' : ''}`}>Support</button>
           
           {currentPage === 'dashboard' ? (
-            <button onClick={() => setCurrentPage('home')} className="px-4 py-2 rounded-xl bg-[#121824] border border-slate-800 hover:border-[#00f2fe] transition-all text-xs font-semibold text-[#00f2fe]">Logout</button>
+            <button onClick={() => { setCurrentPage('home'); setUsername(''); }} className="px-4 py-2 rounded-xl bg-[#121824] border border-slate-800 hover:border-[#00f2fe] transition-all text-xs font-semibold text-[#00f2fe]">Logout</button>
           ) : (
             <button onClick={() => setCurrentPage('login')} className={`px-4 py-2 rounded-xl bg-[#121824] border border-slate-800 hover:border-[#00f2fe] transition-all text-xs font-semibold ${currentPage === 'login' ? 'border-[#00f2fe] text-[#00f2fe]' : ''}`}>Login</button>
           )}
@@ -196,13 +232,37 @@ export default function App() {
               </div>
             </div>
 
-            <div className="p-8 rounded-3xl bg-[#121824] border border-slate-800/80 shadow-2xl space-y-6">
+            {/* Support Request Form */}
+            <form onSubmit={handleSupportSubmit} className="p-8 rounded-3xl bg-[#121824] border border-slate-800/80 shadow-2xl space-y-6">
               <h3 className="text-xl font-bold text-white">Send a support request</h3>
+              
+              {supportSuccess && (
+                <div className="p-4 rounded-xl bg-teal-500/10 border border-teal-500/30 text-teal-400 text-sm font-medium">
+                  ✓ Your support request has been submitted successfully! We will get back to you soon.
+                </div>
+              )}
+
               <div className="space-y-4">
-                <input type="text" placeholder="Username" className="w-full bg-[#0b0f17] border border-slate-800 rounded-xl px-4 py-3.5 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-[#00f2fe] text-sm" />
-                <input type="email" placeholder="Email address" className="w-full bg-[#0b0f17] border border-slate-800 rounded-xl px-4 py-3.5 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-[#00f2fe] text-sm" />
+                <input 
+                  type="text" 
+                  placeholder="Username" 
+                  value={supportName}
+                  onChange={(e) => setSupportName(e.target.value)}
+                  className="w-full bg-[#0b0f17] border border-slate-800 rounded-xl px-4 py-3.5 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-[#00f2fe] text-sm" 
+                />
+                <input 
+                  type="email" 
+                  placeholder="Email address" 
+                  value={supportEmail}
+                  onChange={(e) => setSupportEmail(e.target.value)}
+                  className="w-full bg-[#0b0f17] border border-slate-800 rounded-xl px-4 py-3.5 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-[#00f2fe] text-sm" 
+                />
                 <div className="relative">
-                  <select className="w-full bg-[#0b0f17] border border-slate-800 rounded-xl px-4 py-3.5 text-slate-200 focus:outline-none focus:border-[#00f2fe] text-sm appearance-none cursor-pointer">
+                  <select 
+                    value={supportCategory}
+                    onChange={(e) => setSupportCategory(e.target.value)}
+                    className="w-full bg-[#0b0f17] border border-slate-800 rounded-xl px-4 py-3.5 text-slate-200 focus:outline-none focus:border-[#00f2fe] text-sm appearance-none cursor-pointer"
+                  >
                     <option>Login & Account Issues</option>
                     <option>Track & Course Help</option>
                     <option>Technical Bugs</option>
@@ -210,12 +270,19 @@ export default function App() {
                   </select>
                   <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-xs">▼</div>
                 </div>
-                <textarea rows="4" placeholder="Tell us what you need help with..." className="w-full bg-[#0b0f17] border border-slate-800 rounded-xl p-4 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-[#00f2fe] text-sm resize-none"></textarea>
+                <textarea 
+                  rows="4" 
+                  placeholder="Tell us what you need help with..." 
+                  value={supportMessage}
+                  onChange={(e) => setSupportMessage(e.target.value)}
+                  className="w-full bg-[#0b0f17] border border-slate-800 rounded-xl p-4 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-[#00f2fe] text-sm resize-none"
+                ></textarea>
               </div>
-              <button className="px-6 py-3.5 bg-[#00f2fe] text-black font-bold rounded-xl hover:bg-[#00dfed] transition-all text-sm shadow-lg shadow-[#00f2fe]/10">
+
+              <button type="submit" className="px-6 py-3.5 bg-[#00f2fe] text-black font-bold rounded-xl hover:bg-[#00dfed] transition-all text-sm shadow-lg shadow-[#00f2fe]/10">
                 Submit Request
               </button>
-            </div>
+            </form>
 
             <div className="flex flex-wrap gap-4 pt-4">
               <button className="px-5 py-2.5 rounded-xl bg-[#00f2fe] text-black font-semibold text-xs tracking-wide">Privacy Policy</button>
@@ -236,20 +303,49 @@ export default function App() {
               Sign in to keep your projects, progress, and next best step together.
             </p>
 
-            <div className="p-8 rounded-3xl bg-[#121824] border border-slate-800/80 shadow-2xl text-left space-y-4">
-              <div><input type="text" placeholder="Username" className="w-full bg-[#0b0f17] border border-slate-800 rounded-xl px-4 py-3.5 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-[#00f2fe] text-sm" /></div>
-              <div><input type="email" placeholder="Email address" className="w-full bg-[#0b0f17] border border-slate-800 rounded-xl px-4 py-3.5 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-[#00f2fe] text-sm" /></div>
-              <div><input type="password" placeholder="Password" className="w-full bg-[#0b0f17] border border-slate-800 rounded-xl px-4 py-3.5 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-[#00f2fe] text-sm" /></div>
+            <form onSubmit={handleLogin} className="p-8 rounded-3xl bg-[#121824] border border-slate-800/80 shadow-2xl text-left space-y-4">
+              {loginError && (
+                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs">
+                  {loginError}
+                </div>
+              )}
+              <div>
+                <input 
+                  type="text" 
+                  placeholder="Username" 
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="w-full bg-[#0b0f17] border border-slate-800 rounded-xl px-4 py-3.5 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-[#00f2fe] text-sm" 
+                />
+              </div>
+              <div>
+                <input 
+                  type="email" 
+                  placeholder="Email address" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full bg-[#0b0f17] border border-slate-800 rounded-xl px-4 py-3.5 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-[#00f2fe] text-sm" 
+                />
+              </div>
+              <div>
+                <input 
+                  type="password" 
+                  placeholder="Password" 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full bg-[#0b0f17] border border-slate-800 rounded-xl px-4 py-3.5 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-[#00f2fe] text-sm" 
+                />
+              </div>
               
               <div className="pt-2 space-y-3">
-                <button onClick={() => setCurrentPage('dashboard')} className="w-full py-4 bg-[#00f2fe] text-black font-bold rounded-xl hover:bg-[#00dfed] transition-all text-center shadow-lg shadow-[#00f2fe]/10">
+                <button type="submit" className="w-full py-4 bg-[#00f2fe] text-black font-bold rounded-xl hover:bg-[#00dfed] transition-all text-center shadow-lg shadow-[#00f2fe]/10">
                   Continue
                 </button>
-                <button onClick={() => setCurrentPage('dashboard')} className="w-full py-4 bg-[#a78bfa] text-black font-bold rounded-xl hover:bg-[#9061f9] transition-all text-center">
+                <button type="button" onClick={handleLogin} className="w-full py-4 bg-[#a78bfa] text-black font-bold rounded-xl hover:bg-[#9061f9] transition-all text-center">
                   Personalize my learning path
                 </button>
               </div>
-            </div>
+            </form>
           </div>
         )}
 
@@ -258,8 +354,10 @@ export default function App() {
           <div className="max-w-5xl mx-auto px-6 py-16 space-y-8">
             <div className="p-6 rounded-2xl bg-[#121824] border border-slate-800/80 flex flex-col md:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-[#00f2fe]/20 text-[#00f2fe] flex items-center justify-center font-bold text-xl border border-[#00f2fe]/40">A</div>
-                <div><h2 className="text-xl font-bold text-white">Ayan's SkillForge</h2></div>
+                <div className="w-12 h-12 rounded-xl bg-[#00f2fe]/20 text-[#00f2fe] flex items-center justify-center font-bold text-xl border border-[#00f2fe]/40">
+                  {username ? username.charAt(0).toUpperCase() : 'A'}
+                </div>
+                <div><h2 className="text-xl font-bold text-white">{username ? `${username}'s SkillForge` : "Ayan's SkillForge"}</h2></div>
               </div>
               <div className="px-5 py-2 rounded-full border border-[#00f2fe]/40 bg-[#00f2fe]/10 text-[#00f2fe] font-mono text-xs font-semibold tracking-wider">
                 LEVEL 1 / 100
