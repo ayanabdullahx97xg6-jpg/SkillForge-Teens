@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { ArrowRight } from 'lucide-react';
+import { Shield, Palette, PenTool, Cpu, ArrowRight } from 'lucide-react';
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState('about'); // Defaulting to about or home as you like
+  const [currentPage, setCurrentPage] = useState('home'); // Defaulting back to home!
 
   return (
     <div className="min-h-screen bg-[#0b0f17] text-slate-100 font-sans selection:bg-[#00f2fe] selection:text-black antialiased">
@@ -23,12 +23,57 @@ export default function App() {
       {/* Main Content Area */}
       <main className="pt-20">
         {currentPage === 'home' && (
-          <div className="max-w-6xl mx-auto px-6 py-24 text-center">
-            <h1 className="text-5xl font-extrabold text-white mb-6">Discover Your Superpower</h1>
-            <p className="text-slate-400 text-lg mb-8">By Teens, For Teens</p>
-            <button onClick={() => setCurrentPage('about')} className="px-6 py-3 bg-[#00f2fe] text-black font-bold rounded-xl">
-              Go to About Page
-            </button>
+          <div>
+            {/* Hero Section */}
+            <section className="relative px-6 pt-20 pb-32 text-center overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-b from-[#00f2fe]/10 via-transparent to-transparent pointer-events-none blur-3xl max-w-2xl mx-auto h-96"></div>
+              
+              <div className="inline-block px-4 py-1.5 mb-6 text-xs font-semibold tracking-wide text-[#00f2fe] uppercase bg-[#00f2fe]/10 border border-[#00f2fe]/30 rounded-full">
+                Built with teens. Built for what's next.
+              </div>
+
+              <h1 className="text-5xl md:text-7xl font-extrabold text-white tracking-tight max-w-4xl mx-auto mb-6 leading-tight">
+                Discover Your Superpower <br className="hidden md:block"/>
+                <span className="text-white">– By Teens, For Teens</span>
+              </h1>
+
+              <p className="text-slate-400 text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
+                SkillForge Teens helps you explore the tech and creative skills that feel like you — with guided pathways, real projects, and a community that gets it.
+              </p>
+
+              <div className="flex flex-col items-center gap-4">
+                <button onClick={() => setCurrentPage('courses')} className="px-8 py-4 bg-[#00f2fe] text-black font-bold rounded-xl hover:bg-[#00dfed] transition-all flex items-center gap-3 shadow-lg shadow-[#00f2fe]/20 text-lg">
+                  Find Your Superpower Now <ArrowRight className="w-5 h-5" />
+                </button>
+                <div className="px-4 py-1.5 text-xs text-slate-400 tracking-wider font-mono border border-slate-800 bg-slate-900/50 rounded-lg">
+                  YOUR NEXT OBSESSION MIGHT BE ONE QUIZ AWAY.
+                </div>
+              </div>
+            </section>
+
+            {/* Section 01 / How It Works */}
+            <section className="px-6 py-20 max-w-7xl mx-auto border-t border-slate-900">
+              <div className="mb-12">
+                <span className="text-xs font-mono text-[#00f2fe] tracking-widest uppercase">01 / HOW IT WORKS</span>
+                <h2 className="text-3xl md:text-4xl font-bold text-white mt-2">Meet the quiz that actually gets you.</h2>
+                <p className="text-slate-400 mt-2">Four quick stages turn your interests into a curated starting point — no boring labels, no pressure.</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {[
+                  { step: "01", title: "Choose your energy", desc: "Tell us what makes you curious, creative, or ready to solve a puzzle." },
+                  { step: "02", title: "Pick a challenge", desc: "Choose mini scenarios that feel closer to games than homework." },
+                  { step: "03", title: "Get your signal", desc: "We match your answers with pathways designed to spark a real next move." },
+                  { step: "04", title: "Start building", desc: "Try a first project, share it with your crew, and see what clicks." }
+                ].map((item, idx) => (
+                  <div key={idx} className="p-6 rounded-2xl bg-[#121824] border border-slate-800/80 hover:border-[#00f2fe]/40 transition-all group">
+                    <span className="text-[#00f2fe] font-mono text-xl font-bold">{item.step}</span>
+                    <h3 className="text-xl font-bold text-white mt-3 mb-2 group-hover:text-[#00f2fe] transition-colors">{item.title}</h3>
+                    <p className="text-slate-400 text-sm leading-relaxed">{item.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
           </div>
         )}
 
