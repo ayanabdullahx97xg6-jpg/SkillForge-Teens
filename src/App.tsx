@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { SignInButton, SignUpButton, UserButton, SignedIn, SignedOut } from '@clerk/react'
-import './App.css'
 export default function App() {
   const [currentPage, setCurrentPage] = useState('home');
   useEffect(() => {
