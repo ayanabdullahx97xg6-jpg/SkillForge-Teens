@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Shield, Palette, PenTool, Cpu, ArrowRight } from 'lucide-react';
+import { Shield, Palette, PenTool, Cpu, ArrowRight, Sparkles, Users, Award } from 'lucide-react';
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState('home'); // Defaulting back to home!
+  const [currentPage, setCurrentPage] = useState('home');
 
   return (
     <div className="min-h-screen bg-[#0b0f17] text-slate-100 font-sans selection:bg-[#00f2fe] selection:text-black antialiased">
@@ -72,6 +72,74 @@ export default function App() {
                     <p className="text-slate-400 text-sm leading-relaxed">{item.desc}</p>
                   </div>
                 ))}
+              </div>
+            </section>
+
+            {/* Section 02 / Explore Your Path */}
+            <section className="px-6 py-20 max-w-7xl mx-auto border-t border-slate-900">
+              <div className="mb-12">
+                <span className="text-xs font-mono text-purple-400 tracking-widest uppercase">02 / EXPLORE YOUR PATH</span>
+                <h2 className="text-3xl md:text-4xl font-bold text-white mt-2">Four worlds. Infinite ways to make your mark.</h2>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {[
+                  { icon: <Shield className="w-6 h-6 text-[#00f2fe]" />, title: "Cybersecurity & Safety", desc: "Learn how to protect your world, spot risky moves, and become the digital teammate everyone needs." },
+                  { icon: <Palette className="w-6 h-6 text-purple-400" />, title: "2D/3D Animation", desc: "Bring original characters, worlds, and motion graphics to life from your own point of view." },
+                  { icon: <PenTool className="w-6 h-6 text-pink-400" />, title: "Digital Storytelling", desc: "Shape stories people remember — from interactive worlds to short films, podcasts, and campaigns." },
+                  { icon: <Cpu className="w-6 h-6 text-cyan-400" />, title: "Tech & AI Tools", desc: "Experiment with the tools shaping tomorrow and learn to build with AI responsibly, not blindly." }
+                ].map((path, idx) => (
+                  <div key={idx} className="p-8 rounded-2xl bg-[#121824] border border-slate-800/80 hover:border-slate-700 transition-all flex flex-col justify-between">
+                    <div>
+                      <div className="p-3 bg-slate-900 rounded-xl w-fit mb-6 border border-slate-800">{path.icon}</div>
+                      <h3 className="text-2xl font-bold text-white mb-3">{path.title}</h3>
+                      <p className="text-slate-400 leading-relaxed">{path.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* Section 03 / The Why */}
+            <section className="px-6 py-20 max-w-7xl mx-auto border-t border-slate-900 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+              <div>
+                <span className="text-xs font-mono text-[#00f2fe] tracking-widest uppercase">03 / THE WHY</span>
+                <h2 className="text-3xl md:text-4xl font-bold text-white mt-2 mb-6">Early skill-building changes the way young people see themselves.</h2>
+                <p className="text-slate-400 leading-relaxed">
+                  When teens get a safe place to make things, solve problems, and share what they know, confidence stops being a slogan. It becomes a habit they can take anywhere.
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-6 rounded-2xl bg-[#121824] border border-slate-800 text-center">
+                  <h3 className="text-3xl font-black text-[#00f2fe]">13–18</h3>
+                  <p className="text-slate-400 text-sm mt-2">built for the teenage years</p>
+                </div>
+                <div className="p-6 rounded-2xl bg-[#121824] border border-slate-800 text-center">
+                  <h3 className="text-3xl font-black text-purple-400">3 MIN</h3>
+                  <p className="text-slate-400 text-sm mt-2">to find a new starting point</p>
+                </div>
+                <div className="p-6 rounded-2xl bg-[#121824] border border-slate-800 text-center">
+                  <h3 className="text-3xl font-black text-pink-400">4 PATHS</h3>
+                  <p className="text-slate-400 text-sm mt-2">to explore now and remix later</p>
+                </div>
+                <div className="p-6 rounded-2xl bg-[#121824] border border-slate-800 text-center">
+                  <h3 className="text-3xl font-black text-cyan-400">100%</h3>
+                  <p className="text-slate-400 text-sm mt-2">beginner-friendly momentum</p>
+                </div>
+              </div>
+            </section>
+
+            {/* Section 04 / Community Banner */}
+            <section className="px-6 py-12 max-w-7xl mx-auto">
+              <div className="p-10 rounded-3xl bg-gradient-to-r from-[#121824] to-[#0f172a] border border-slate-800 flex flex-col md:flex-row items-center justify-between gap-8">
+                <div>
+                  <span className="text-xs font-mono text-[#00f2fe] tracking-widest uppercase">04 / BUILD THE FUTURE TOGETHER</span>
+                  <h3 className="text-2xl md:text-3xl font-bold text-white mt-2">Bring SkillForge Teens to your school or community.</h3>
+                  <p className="text-slate-400 mt-2 max-w-xl text-sm">For parents, educators, youth organizations, and sponsors ready to open more doors for the next generation.</p>
+                </div>
+                <button className="px-6 py-3 bg-white text-black font-bold rounded-xl hover:bg-slate-200 transition-all whitespace-nowrap">
+                  Partner With Us
+                </button>
               </div>
             </section>
           </div>
