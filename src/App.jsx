@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Sparkles, BookOpen, Bot, ArrowRight, Star, Trophy, Users, CheckCircle, Award, X, Inbox, Trash2, User, Edit3, PlusCircle } from 'lucide-react';
+import { Shield, Sparkles, BookOpen, Bot, ArrowRight, Star, Trophy, Users, CheckCircle, Award, X, Inbox, Trash2, User, Edit3, PlusCircle, Lock, Unlock } from 'lucide-react';
 import { ClerkProvider, SignedIn, SignedOut, SignInButton, SignUpButton, UserButton, useUser } from '@clerk/clerk-react';
 
 // Firebase Imports
@@ -35,6 +35,48 @@ function MainContent() {
   const { user } = useUser();
 
   const isAdmin = user && user.primaryEmailAddress?.emailAddress === ADMIN_EMAIL;
+  const [isEditMode, setIsEditMode] = useState(false);
+
+  // Editable Site Content State (Synced with Firebase)
+  const [siteContent, setSiteContent] = useState({
+    heroBadge: "⚡ Build Your Future, One Skill at a Time",
+    heroTitle: "Discover Your Superpower – By Teens, For Teens",
+    heroSubtitle: "SkillForge Teens helps you explore tech and creative skills with permanent cloud storage for your progress and certificates.",
+    howItWorksTitle: "01 / HOW IT WORKS",
+    howItWorksHeading: "From curious beginner to certified creator",
+    theWhyTitle: "03 / THE WHY",
+    theWhyHeading: "Why SkillForge Teens exists",
+    theWhyDesc: "We believe young minds deserve professional-grade tools, secure cloud tracking, and a community built specifically for their growth without distractions.",
+    buildFutureTitle: "04 / BUILD THE FUTURE TOGETHER",
+    buildFutureHeading: "Ready to start your journey?",
+    buildFutureDesc: "Join hundreds of teens learning cybersecurity, animation, AI prompting, and storytelling today."
+  });
+
+  // Fetch Site Content from Firebase
+  useEffect(() => {
+    const fetchSiteContent = async () => {
+      try {
+        const docRef = doc(db, "settings", "siteContent");
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setSiteContent(docSnap.data());
+        }
+      } catch (e) {
+        console.log("Using default site content");
+      }
+    };
+    fetchSiteContent();
+  }, []);
+
+  const handleContentChange = async (key, value) => {
+    const updated = { ...siteContent, [key]: value };
+    setSiteContent(updated);
+    try {
+      await setDoc(doc(db, "settings", "siteContent"), updated);
+    } catch (e) {
+      console.error("Error saving content to Firebase", e);
+    }
+  };
 
   // Default Courses Fallback
   const defaultCourses = [
@@ -275,6 +317,20 @@ function MainContent() {
   return (
     <div className="min-h-screen bg-[#0b0f17] text-slate-100 font-sans selection:bg-[#00f2fe] selection:text-black antialiased relative">
       
+      {/* Framer-Style Admin Inline Edit Bar */}
+      {isAdmin && (
+        <div className="fixed bottom-6 right-6 z-50 bg-[#121824] border border-[#00f2fe] p-3 rounded-2xl shadow-2xl flex items-center gap-3">
+          <span className="text-xs font-mono text-[#00f2fe] px-2 font-bold">ADMIN EDIT MODE</span>
+          <button 
+            onClick={() => setIsEditMode(!isEditMode)}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${isEditMode ? 'bg-[#00f2fe] text-black' : 'bg-slate-800 text-white'}`}
+          >
+            {isEditMode ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+            {isEditMode ? 'Editing Active (Click texts to edit)' : 'Enable Edit Bar'}
+          </button>
+        </div>
+      )}
+
       {/* Navigation Header */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0b0f17]/90 backdrop-blur-md border-b border-slate-800/60 px-8 h-20 flex items-center justify-between">
         <div className="text-xl font-black tracking-wider text-white flex items-center gap-1 cursor-pointer" onClick={() => setCurrentPage('home')}>
@@ -319,27 +375,221 @@ function MainContent() {
         
         {/* HOME PAGE */}
         {currentPage === 'home' && (
-          <section className="relative px-6 pt-20 pb-32 text-center overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-b from-[#00f2fe]/10 via-transparent to-transparent pointer-events-none blur-3xl max-w-2xl mx-auto h-96"></div>
-            <div className="inline-block px-4 py-1.5 mb-6 text-xs font-semibold tracking-wide text-[#00f2fe] uppercase bg-[#00f2fe]/10 border border-[#00f2fe]/30 rounded-full">
-  ⚡ Build Your Future, One Skill at a Time
-</div>
-            <h1 className="text-5xl md:text-7xl font-extrabold text-white tracking-tight max-w-4xl mx-auto mb-6 leading-tight">
-              Discover Your Superpower <br className="hidden md:block"/>
-              <span className="text-[#00f2fe]">– By Teens, For Teens</span>
-            </h1>
-            <p className="text-slate-400 text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
-              SkillForge Teens helps you explore tech and creative skills with permanent cloud storage for your progress and certificates.
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <button onClick={() => setCurrentPage('courses')} className="px-8 py-4 bg-[#00f2fe] text-black font-bold rounded-xl hover:bg-[#00dfed] transition-all flex items-center gap-3 shadow-lg shadow-[#00f2fe]/20 text-lg">
-                Explore All Tracks <ArrowRight className="w-5 h-5" />
-              </button>
-              <button onClick={() => setCurrentPage('about')} className="px-8 py-4 bg-[#121824] border border-slate-800 text-white font-bold rounded-xl hover:border-[#00f2fe] transition-all text-lg">
-                Learn Our Story
-              </button>
-            </div>
-          </section>
+          <div className="space-y-24 pb-32">
+            {/* Hero Section */}
+            <section className="relative px-6 pt-20 pb-16 text-center overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-b from-[#00f2fe]/10 via-transparent to-transparent pointer-events-none blur-3xl max-w-2xl mx-auto h-96"></div>
+              
+              {isEditMode ? (
+                <input 
+                  type="text" 
+                  value={siteContent.heroBadge} 
+                  onChange={(e) => handleContentChange('heroBadge', e.target.value)}
+                  className="bg-slate-900 border border-[#00f2fe] text-[#00f2fe] text-xs font-semibold px-4 py-1.5 rounded-full mb-6 mx-auto block text-center"
+                />
+              ) : (
+                <div className="inline-block px-4 py-1.5 mb-6 text-xs font-semibold tracking-wide text-[#00f2fe] uppercase bg-[#00f2fe]/10 border border-[#00f2fe]/30 rounded-full">
+                  {siteContent.heroBadge}
+                </div>
+              )}
+
+              {isEditMode ? (
+                <textarea 
+                  value={siteContent.heroTitle} 
+                  onChange={(e) => handleContentChange('heroTitle', e.target.value)}
+                  className="bg-slate-900 border border-[#00f2fe] text-white text-4xl md:text-6xl font-extrabold p-4 rounded-xl w-full max-w-4xl mx-auto mb-6 text-center outline-none resize-none"
+                  rows={2}
+                />
+              ) : (
+                <h1 className="text-5xl md:text-7xl font-extrabold text-white tracking-tight max-w-4xl mx-auto mb-6 leading-tight">
+                  {siteContent.heroTitle}
+                </h1>
+              )}
+
+              {isEditMode ? (
+                <textarea 
+                  value={siteContent.heroSubtitle} 
+                  onChange={(e) => handleContentChange('heroSubtitle', e.target.value)}
+                  className="bg-slate-900 border border-[#00f2fe] text-slate-300 text-base p-4 rounded-xl w-full max-w-2xl mx-auto mb-10 text-center outline-none"
+                  rows={2}
+                />
+              ) : (
+                <p className="text-slate-400 text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
+                  {siteContent.heroSubtitle}
+                </p>
+              )}
+
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                <button onClick={() => setCurrentPage('courses')} className="px-8 py-4 bg-[#00f2fe] text-black font-bold rounded-xl hover:bg-[#00dfed] transition-all flex items-center gap-3 shadow-lg shadow-[#00f2fe]/20 text-lg">
+                  Explore All Tracks <ArrowRight className="w-5 h-5" />
+                </button>
+                <button onClick={() => setCurrentPage('about')} className="px-8 py-4 bg-[#121824] border border-slate-800 text-white font-bold rounded-xl hover:border-[#00f2fe] transition-all text-lg">
+                  Learn Our Story
+                </button>
+              </div>
+            </section>
+
+            {/* Stats Boxes Section */}
+            <section className="max-w-6xl mx-auto px-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <div className="p-6 rounded-3xl bg-[#121824] border border-slate-800 text-center space-y-2">
+                  <h3 className="text-3xl md:text-4xl font-black text-[#00f2fe]">13-18</h3>
+                  <p className="text-xs uppercase tracking-widest text-slate-400 font-mono">Target Age Group</p>
+                </div>
+                <div className="p-6 rounded-3xl bg-[#121824] border border-slate-800 text-center space-y-2">
+                  <h3 className="text-3xl md:text-4xl font-black text-[#00f2fe]">3 MIN</h3>
+                  <p className="text-xs uppercase tracking-widest text-slate-400 font-mono">Quick Onboarding</p>
+                </div>
+                <div className="p-6 rounded-3xl bg-[#121824] border border-slate-800 text-center space-y-2">
+                  <h3 className="text-3xl md:text-4xl font-black text-[#00f2fe]">4 PATHS</h3>
+                  <p className="text-xs uppercase tracking-widest text-slate-400 font-mono">Dynamic Skill Tracks</p>
+                </div>
+                <div className="p-6 rounded-3xl bg-[#121824] border border-slate-800 text-center space-y-2">
+                  <h3 className="text-3xl md:text-4xl font-black text-[#00f2fe]">100%</h3>
+                  <p className="text-xs uppercase tracking-widest text-slate-400 font-mono">Cloud Synced</p>
+                </div>
+              </div>
+            </section>
+
+            {/* 01 / HOW IT WORKS SECTION */}
+            <section className="max-w-6xl mx-auto px-6 space-y-12">
+              <div className="text-center md:text-left">
+                {isEditMode ? (
+                  <input 
+                    type="text" 
+                    value={siteContent.howItWorksTitle} 
+                    onChange={(e) => handleContentChange('howItWorksTitle', e.target.value)}
+                    className="bg-slate-900 border border-[#00f2fe] text-[#00f2fe] text-xs font-mono uppercase tracking-widest p-2 rounded-lg mb-2 w-full max-w-xs"
+                  />
+                ) : (
+                  <span className="text-xs font-mono text-[#00f2fe] tracking-widest uppercase block mb-3">{siteContent.howItWorksTitle}</span>
+                )}
+
+                {isEditMode ? (
+                  <input 
+                    type="text" 
+                    value={siteContent.howItWorksHeading} 
+                    onChange={(e) => handleContentChange('howItWorksHeading', e.target.value)}
+                    className="bg-slate-900 border border-[#00f2fe] text-white text-3xl md:text-4xl font-extrabold p-2 rounded-lg w-full max-w-xl"
+                  />
+                ) : (
+                  <h2 className="text-3xl md:text-5xl font-extrabold text-white">{siteContent.howItWorksHeading}</h2>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div className="p-8 rounded-3xl bg-[#121824] border border-slate-800 space-y-4">
+                  <div className="w-12 h-12 rounded-2xl bg-[#00f2fe]/10 text-[#00f2fe] font-black flex items-center justify-center text-lg">01</div>
+                  <h3 className="text-xl font-bold text-white">Choose Your Track</h3>
+                  <p className="text-slate-400 text-sm leading-relaxed">Select from cybersecurity, animation, AI prompting, or digital storytelling.</p>
+                </div>
+                <div className="p-8 rounded-3xl bg-[#121824] border border-slate-800 space-y-4">
+                  <div className="w-12 h-12 rounded-2xl bg-[#00f2fe]/10 text-[#00f2fe] font-black flex items-center justify-center text-lg">02</div>
+                  <h3 className="text-xl font-bold text-white">Build & Advance</h3>
+                  <p className="text-slate-400 text-sm leading-relaxed">Complete modular milestones and watch your cloud progress bar grow live.</p>
+                </div>
+                <div className="p-8 rounded-3xl bg-[#121824] border border-slate-800 space-y-4">
+                  <div className="w-12 h-12 rounded-2xl bg-[#00f2fe]/10 text-[#00f2fe] font-black flex items-center justify-center text-lg">03</div>
+                  <h3 className="text-xl font-bold text-white">Earn Certificates</h3>
+                  <p className="text-slate-400 text-sm leading-relaxed">Reach 100% completion to unlock verified completion certificates instantly.</p>
+                </div>
+              </div>
+            </section>
+
+            {/* 03 / THE WHY SECTION */}
+            <section className="max-w-6xl mx-auto px-6 py-12 bg-[#121824]/50 border border-slate-800/80 rounded-3xl">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center p-6 md:p-10">
+                <div className="space-y-6">
+                  {isEditMode ? (
+                    <input 
+                      type="text" 
+                      value={siteContent.theWhyTitle} 
+                      onChange={(e) => handleContentChange('theWhyTitle', e.target.value)}
+                      className="bg-slate-900 border border-[#00f2fe] text-[#00f2fe] text-xs font-mono uppercase tracking-widest p-2 rounded-lg w-full"
+                    />
+                  ) : (
+                    <span className="text-xs font-mono text-[#00f2fe] tracking-widest uppercase block">{siteContent.theWhyTitle}</span>
+                  )}
+
+                  {isEditMode ? (
+                    <input 
+                      type="text" 
+                      value={siteContent.theWhyHeading} 
+                      onChange={(e) => handleContentChange('theWhyHeading', e.target.value)}
+                      className="bg-slate-900 border border-[#00f2fe] text-white text-3xl font-extrabold p-2 rounded-lg w-full"
+                    />
+                  ) : (
+                    <h2 className="text-3xl md:text-4xl font-extrabold text-white">{siteContent.theWhyHeading}</h2>
+                  )}
+
+                  {isEditMode ? (
+                    <textarea 
+                      value={siteContent.theWhyDesc} 
+                      onChange={(e) => handleContentChange('theWhyDesc', e.target.value)}
+                      className="bg-slate-900 border border-[#00f2fe] text-slate-300 text-sm p-3 rounded-lg w-full outline-none"
+                      rows={4}
+                    />
+                  ) : (
+                    <p className="text-slate-400 text-base leading-relaxed">{siteContent.theWhyDesc}</p>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-6 rounded-2xl bg-[#0b0f17] border border-slate-800 space-y-2">
+                    <Shield className="w-8 h-8 text-[#00f2fe]" />
+                    <h4 className="font-bold text-white text-sm">Secure Database</h4>
+                    <p className="text-xs text-slate-400">Firebase cloud persistence for absolute data reliability.</p>
+                  </div>
+                  <div className="p-6 rounded-2xl bg-[#0b0f17] border border-slate-800 space-y-2">
+                    <Sparkles className="w-8 h-8 text-[#00f2fe]" />
+                    <h4 className="font-bold text-white text-sm">Teen Focused</h4>
+                    <p className="text-xs text-slate-400">Tailored learning curves built specifically for young creators.</p>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* 04 / BUILD THE FUTURE TOGETHER */}
+            <section className="max-w-4xl mx-auto px-6 text-center space-y-8 py-16">
+              {isEditMode ? (
+                <input 
+                  type="text" 
+                  value={siteContent.buildFutureTitle} 
+                  onChange={(e) => handleContentChange('buildFutureTitle', e.target.value)}
+                  className="bg-slate-900 border border-[#00f2fe] text-[#00f2fe] text-xs font-mono uppercase tracking-widest p-2 rounded-lg mx-auto block text-center"
+                />
+              ) : (
+                <span className="text-xs font-mono text-[#00f2fe] tracking-widest uppercase block">{siteContent.buildFutureTitle}</span>
+              )}
+
+              {isEditMode ? (
+                <input 
+                  type="text" 
+                  value={siteContent.buildFutureHeading} 
+                  onChange={(e) => handleContentChange('buildFutureHeading', e.target.value)}
+                  className="bg-slate-900 border border-[#00f2fe] text-white text-3xl md:text-5xl font-extrabold p-2 rounded-lg mx-auto block text-center w-full"
+                />
+              ) : (
+                <h2 className="text-3xl md:text-5xl font-extrabold text-white">{siteContent.buildFutureHeading}</h2>
+              )}
+
+              {isEditMode ? (
+                <textarea 
+                  value={siteContent.buildFutureDesc} 
+                  onChange={(e) => handleContentChange('buildFutureDesc', e.target.value)}
+                  className="bg-slate-900 border border-[#00f2fe] text-slate-300 text-sm p-3 rounded-lg mx-auto block w-full max-w-xl outline-none"
+                  rows={2}
+                />
+              ) : (
+                <p className="text-slate-400 text-lg max-w-xl mx-auto">{siteContent.buildFutureDesc}</p>
+              )}
+
+              <div className="pt-4">
+                <button onClick={() => setCurrentPage('courses')} className="px-8 py-4 bg-[#00f2fe] text-black font-bold rounded-xl hover:bg-[#00dfed] transition-all shadow-lg shadow-[#00f2fe]/20 text-base">
+                  Get Started Now
+                </button>
+              </div>
+            </section>
+          </div>
         )}
 
         {/* ABOUT PAGE */}
@@ -351,7 +601,7 @@ function MainContent() {
                 Big curiosity deserves permanent cloud storage.
               </h1>
               <p className="text-slate-400 text-lg md:text-xl leading-relaxed">
-                All data is now securely saved in Firebase cloud database.
+                All data is securely saved in Firebase cloud database with live tracking and instant admin updates.
               </p>
             </div>
           </div>
