@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Sparkles, BookOpen, Bot, ArrowRight, Star, Trophy, Users, CheckCircle, FileText, Download, Award, X, Inbox, Trash2 } from 'lucide-react';
+import { Shield, Sparkles, BookOpen, Bot, ArrowRight, Star, Trophy, Users, CheckCircle, Award, X, Inbox, Trash2, User, Edit3, PlusCircle } from 'lucide-react';
 import { ClerkProvider, SignedIn, SignedOut, SignInButton, SignUpButton, UserButton, useUser } from '@clerk/clerk-react';
 
 const clerkPubKey = "pk_test_ZXZvbHZpbmctZG92ZS03MzA0LmNsZXJrLmFjY291bnRzLmRldiQ";
 
-// Aap ki Admin Email yahan set ho chuki hai
 const ADMIN_EMAIL = "ayanabdullahx967xg6@gmail.com"; 
 
 export default function App() {
@@ -19,24 +18,101 @@ function MainContent() {
   const [currentPage, setCurrentPage] = useState('home');
   const { user } = useUser();
 
-  // Check if current logged-in user is admin
   const isAdmin = user && user.primaryEmailAddress?.emailAddress === ADMIN_EMAIL;
 
-  // Community Leaderboard
+  // Dynamic Courses List (Admin can add new courses)
+  const [courses, setCourses] = useState(() => {
+    const saved = localStorage.getItem('skillforge_courses');
+    return saved ? JSON.parse(saved) : [
+      { id: 'cybersecurity', title: 'Cybersecurity & Safety', desc: 'Practice smart digital habits, understand encryption basics, and learn how to secure your online presence against modern threats.' },
+      { id: 'animation', title: '2D/3D Animation', desc: 'Bring original characters to life using industry-standard principles of motion, keyframing, and basic modeling.' },
+      { id: 'storytelling', title: 'Creative Storytelling', desc: 'Master the art of digital writing, script formatting, world-building, and engaging media production for modern platforms.' },
+      { id: 'aiTools', title: 'AI Tools & Prompting', desc: 'Learn how to leverage AI ethically, craft powerful prompts, generate creative assets, and supercharge your productivity.' },
+    ];
+  });
+
+  // Admin New Course Form States
+  const [newCourseTitle, setNewCourseTitle] = useState('');
+  const [newCourseDesc, setNewCourseDesc] = useState('');
+  const [courseSuccess, setCourseSuccess] = useState(false);
+
+  const handlePublishCourse = (e) => {
+    e.preventDefault();
+    if (!newCourseTitle || !newCourseDesc) return;
+
+    const courseKey = 'course_' + Date.now();
+    const newCourseObj = {
+      id: courseKey,
+      title: newCourseTitle,
+      desc: newCourseDesc
+    };
+
+    const updatedCourses = [...courses, newCourseObj];
+    setCourses(updatedCourses);
+    localStorage.setItem('skillforge_courses', JSON.stringify(updatedCourses));
+
+    setNewCourseTitle('');
+    setNewCourseDesc('');
+    setCourseSuccess(true);
+    setTimeout(() => setCourseSuccess(false), 4000);
+  };
+
+  const deleteCourse = (id) => {
+    const filtered = courses.filter(c => c.id !== id);
+    setCourses(filtered);
+    localStorage.setItem('skillforge_courses', JSON.stringify(filtered));
+  };
+
+  // Profile State
+  const [profile, setProfile] = useState(() => {
+    if (!user) return { fullName: '', age: '', bio: '' };
+    const saved = localStorage.getItem(`profile_${user.id}`);
+    return saved ? JSON.parse(saved) : { fullName: user.firstName || '', age: '', bio: '' };
+  });
+  const [profileSuccess, setProfileSuccess] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      const savedProfile = localStorage.getItem(`profile_${user.id}`);
+      if (!savedProfile && user.firstName) {
+        setProfile(prev => ({ ...prev, fullName: user.firstName }));
+      }
+    }
+  }, [user]);
+
+  const handleProfileSave = (e) => {
+    e.preventDefault();
+    if (!user) return;
+    localStorage.setItem(`profile_${user.id}`, JSON.stringify(profile));
+    setProfileSuccess(true);
+    setTimeout(() => setProfileSuccess(false), 4000);
+
+    const userName = profile.fullName || user.firstName || 'Learner';
+    updateLeaderboardName(user.id, userName);
+  };
+
+  const updateLeaderboardName = (userId, newName) => {
+    setLeaderboard(prev => {
+      const updated = prev.map(item => item.id === userId ? { ...item, name: newName } : item);
+      localStorage.setItem('skillforge_community_leaderboard', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  // Leaderboard State
   const [leaderboard, setLeaderboard] = useState(() => {
     const saved = localStorage.getItem('skillforge_community_leaderboard');
     return saved ? JSON.parse(saved) : [
       { id: 'david', name: 'David', track: 'Cybersecurity & Safety', progress: 90 },
       { id: 'ayesha', name: 'Ayesha', track: '2D/3D Animation', progress: 75 },
-      { id: 'zain', name: 'Zain', track: 'AI Tools & Prompting', progress: 95 },
-      { id: 'sara', name: 'Sara', track: 'Creative Storytelling', progress: 60 },
     ];
   });
 
+  // Dynamic User Progress State
   const [progress, setProgress] = useState(() => {
-    if (!user) return { cybersecurity: 20, animation: 10, storytelling: 0, aiTools: 10 };
+    if (!user) return {};
     const saved = localStorage.getItem(`progress_${user.id}`);
-    return saved ? JSON.parse(saved) : { cybersecurity: 20, animation: 10, storytelling: 0, aiTools: 10 };
+    return saved ? JSON.parse(saved) : {};
   });
 
   // Support Requests State (Admin Inbox)
@@ -45,13 +121,12 @@ function MainContent() {
     return saved ? JSON.parse(saved) : [];
   });
 
-  // Certificate Modal State
   const [activeCertificate, setActiveCertificate] = useState(null);
 
   useEffect(() => {
     if (user) {
       const saved = localStorage.getItem(`progress_${user.id}`);
-      const userName = user.firstName || user.username || 'Learner';
+      const userName = profile.fullName || user.firstName || user.username || 'Learner';
       
       if (saved) {
         const parsedProgress = JSON.parse(saved);
@@ -64,42 +139,49 @@ function MainContent() {
   }, [user]);
 
   const updateLeaderboardInStorage = (userId, userName, currentProgress) => {
-    const tracks = [
-      { name: 'Cybersecurity & Safety', val: currentProgress.cybersecurity },
-      { name: '2D/3D Animation', val: currentProgress.animation },
-      { name: 'Creative Storytelling', val: currentProgress.storytelling },
-      { name: 'AI Tools & Prompting', val: currentProgress.aiTools },
-    ];
-    tracks.sort((a, b) => b.val - a.val);
-    const topTrack = tracks[0];
+    const trackEntries = Object.entries(currentProgress);
+    if (trackEntries.length === 0) return;
+
+    let topTrackName = 'General Learning';
+    let topVal = 0;
+
+    trackEntries.forEach(([courseId, val]) => {
+      const found = courses.find(c => c.id === courseId);
+      if (found && val > topVal) {
+        topVal = val;
+        topTrackName = found.title;
+      }
+    });
 
     setLeaderboard((prev) => {
       const existingIndex = prev.findIndex((item) => item.id === userId);
       let updated;
       if (existingIndex > -1) {
         updated = [...prev];
-        updated[existingIndex] = { id: userId, name: userName, track: topTrack.name, progress: topTrack.val };
+        updated[existingIndex] = { id: userId, name: userName, track: topTrackName, progress: topVal };
       } else {
-        updated = [...prev, { id: userId, name: userName, track: topTrack.name, progress: topTrack.val }];
+        updated = [...prev, { id: userId, name: userName, track: topTrackName, progress: topVal }];
       }
       localStorage.setItem('skillforge_community_leaderboard', JSON.stringify(updated));
       return updated;
     });
   };
 
-  const updateProgress = (courseKey) => {
+  const updateProgress = (courseId) => {
     if (!user) return;
+    const currentVal = progress[courseId] || 0;
     const updated = {
       ...progress,
-      [courseKey]: Math.min(100, (progress[courseKey] || 0) + 10)
+      [courseId]: Math.min(100, currentVal + 10)
     };
     setProgress(updated);
     localStorage.setItem(`progress_${user.id}`, JSON.stringify(updated));
     
-    const userName = user.firstName || user.username || 'Learner';
+    const userName = profile.fullName || user.firstName || user.username || 'Learner';
     updateLeaderboardInStorage(user.id, userName, updated);
   };
 
+  // Support Form State
   const [supportName, setSupportName] = useState('');
   const [supportEmail, setSupportEmail] = useState('');
   const [supportMessage, setSupportMessage] = useState('');
@@ -157,19 +239,18 @@ function MainContent() {
           <button onClick={() => setCurrentPage('home')} className={`hover:text-[#00f2fe] transition-colors ${currentPage === 'home' ? 'text-[#00f2fe]' : ''}`}>Home</button>
           <button onClick={() => setCurrentPage('about')} className={`hover:text-[#00f2fe] transition-colors ${currentPage === 'about' ? 'text-[#00f2fe]' : ''}`}>About</button>
           <button onClick={() => setCurrentPage('courses')} className={`hover:text-[#00f2fe] transition-colors ${currentPage === 'courses' ? 'text-[#00f2fe]' : ''}`}>Courses</button>
-          <button onClick={() => setCurrentPage('resources')} className={`hover:text-[#00f2fe] transition-colors ${currentPage === 'resources' ? 'text-[#00f2fe]' : ''}`}>Resources</button>
           <button onClick={() => setCurrentPage('support')} className={`hover:text-[#00f2fe] transition-colors ${currentPage === 'support' ? 'text-[#00f2fe]' : ''}`}>Support</button>
           
           {isAdmin && (
             <button onClick={() => setCurrentPage('admin')} className={`px-3 py-1.5 rounded-lg bg-teal-500/10 border border-teal-500/40 text-teal-400 font-bold flex items-center gap-1.5 text-xs ${currentPage === 'admin' ? 'bg-teal-500/20' : ''}`}>
-              <Inbox className="w-4 h-4" /> Admin Inbox ({supportRequests.length})
+              <Inbox className="w-4 h-4" /> Admin Panel ({supportRequests.length})
             </button>
           )}
 
           <SignedIn>
             <div className="flex items-center gap-3">
               <button onClick={() => setCurrentPage('dashboard')} className={`text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-800 ${currentPage === 'dashboard' ? 'border-[#00f2fe] text-[#00f2fe]' : 'text-slate-300'}`}>
-                Dashboard
+                Dashboard & Profile
               </button>
               <UserButton afterSignOutUrl="/" />
             </div>
@@ -231,100 +312,37 @@ function MainContent() {
           </div>
         )}
 
-        {/* COURSES PAGE */}
+        {/* COURSES PAGE (Dynamic Courses Published by Admin) */}
         {currentPage === 'courses' && (
           <div className="max-w-6xl mx-auto px-6 py-20 space-y-12">
             <div>
-              <span className="text-xs font-mono text-[#00f2fe] tracking-widest uppercase block mb-3">SKILL TRACKS</span>
+              <span className="text-xs font-mono text-[#00f2fe] tracking-widest uppercase block mb-3">LIVE SKILL TRACKS</span>
               <h1 className="text-4xl md:text-6xl font-extrabold text-white tracking-tight mb-4 leading-tight">
                 Pick a path. Start making.
               </h1>
-              <p className="text-slate-400 text-lg">Choose a track below to begin your hands-on journey.</p>
+              <p className="text-slate-400 text-lg">Choose any published track below to begin your hands-on journey.</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="p-8 rounded-3xl bg-[#121824] border border-slate-800/80 flex flex-col justify-between space-y-6">
-                <div>
-                  <div className="w-12 h-12 rounded-2xl bg-[#00f2fe]/10 flex items-center justify-center text-[#00f2fe] mb-6">
-                    <Shield className="w-6 h-6" />
+              {courses.map((course) => (
+                <div key={course.id} className="p-8 rounded-3xl bg-[#121824] border border-slate-800/80 flex flex-col justify-between space-y-6">
+                  <div>
+                    <div className="w-12 h-12 rounded-2xl bg-[#00f2fe]/10 flex items-center justify-center text-[#00f2fe] mb-6">
+                      <BookOpen className="w-6 h-6" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-white mb-3">{course.title}</h3>
+                    <p className="text-slate-400 text-sm leading-relaxed mb-4">{course.desc}</p>
                   </div>
-                  <h3 className="text-2xl font-bold text-white mb-3">Cybersecurity & Safety</h3>
-                  <p className="text-slate-400 text-sm leading-relaxed mb-4">Practice smart digital habits, understand encryption basics, and learn how to secure your online presence against modern threats.</p>
+                  <SignedIn>
+                    <button onClick={() => { updateProgress(course.id); setCurrentPage('dashboard'); }} className="w-full py-3 bg-[#00f2fe] text-black font-bold text-sm rounded-xl hover:bg-[#00dfed] transition-all">Start Track & View Dashboard</button>
+                  </SignedIn>
+                  <SignedOut>
+                    <SignInButton mode="modal">
+                      <button className="w-full py-3 bg-[#00f2fe] text-black font-bold text-sm rounded-xl hover:bg-[#00dfed] transition-all">Sign in to Enroll</button>
+                    </SignInButton>
+                  </SignedOut>
                 </div>
-                <SignedIn>
-                  <button onClick={() => { updateProgress('cybersecurity'); setCurrentPage('dashboard'); }} className="w-full py-3 bg-[#00f2fe] text-black font-bold text-sm rounded-xl hover:bg-[#00dfed] transition-all">Start Track & View Dashboard</button>
-                </SignedIn>
-                <SignedOut>
-                  <SignInButton mode="modal">
-                    <button className="w-full py-3 bg-[#00f2fe] text-black font-bold text-sm rounded-xl hover:bg-[#00dfed] transition-all">Sign in to Enroll</button>
-                  </SignInButton>
-                </SignedOut>
-              </div>
-
-              <div className="p-8 rounded-3xl bg-[#121824] border border-slate-800/80 flex flex-col justify-between space-y-6">
-                <div>
-                  <div className="w-12 h-12 rounded-2xl bg-[#00f2fe]/10 flex items-center justify-center text-[#00f2fe] mb-6">
-                    <Sparkles className="w-6 h-6" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-white mb-3">2D/3D Animation</h3>
-                  <p className="text-slate-400 text-sm leading-relaxed mb-4">Bring original characters to life using industry-standard principles of motion, keyframing, and basic modeling.</p>
-                </div>
-                <SignedIn>
-                  <button onClick={() => { updateProgress('animation'); setCurrentPage('dashboard'); }} className="w-full py-3 bg-[#00f2fe] text-black font-bold text-sm rounded-xl hover:bg-[#00dfed] transition-all">Start Track & View Dashboard</button>
-                </SignedIn>
-                <SignedOut>
-                  <SignInButton mode="modal">
-                    <button className="w-full py-3 bg-[#00f2fe] text-black font-bold text-sm rounded-xl hover:bg-[#00dfed] transition-all">Sign in to Enroll</button>
-                  </SignInButton>
-                </SignedOut>
-              </div>
-
-              <div className="p-8 rounded-3xl bg-[#121824] border border-slate-800/80 flex flex-col justify-between space-y-6">
-                <div>
-                  <div className="w-12 h-12 rounded-2xl bg-[#00f2fe]/10 flex items-center justify-center text-[#00f2fe] mb-6">
-                    <BookOpen className="w-6 h-6" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-white mb-3">Creative Storytelling</h3>
-                  <p className="text-slate-400 text-sm leading-relaxed mb-4">Master the art of digital writing, script formatting, world-building, and engaging media production for modern platforms.</p>
-                </div>
-                <SignedIn>
-                  <button onClick={() => { updateProgress('storytelling'); setCurrentPage('dashboard'); }} className="w-full py-3 bg-[#00f2fe] text-black font-bold text-sm rounded-xl hover:bg-[#00dfed] transition-all">Start Track & View Dashboard</button>
-                </SignedIn>
-                <SignedOut>
-                  <SignInButton mode="modal">
-                    <button className="w-full py-3 bg-[#00f2fe] text-black font-bold text-sm rounded-xl hover:bg-[#00dfed] transition-all">Sign in to Enroll</button>
-                  </SignInButton>
-                </SignedOut>
-              </div>
-
-              <div className="p-8 rounded-3xl bg-[#121824] border border-slate-800/80 flex flex-col justify-between space-y-6">
-                <div>
-                  <div className="w-12 h-12 rounded-2xl bg-[#00f2fe]/10 flex items-center justify-center text-[#00f2fe] mb-6">
-                    <Bot className="w-6 h-6" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-white mb-3">AI Tools & Prompting</h3>
-                  <p className="text-slate-400 text-sm leading-relaxed mb-4">Learn how to leverage AI ethically, craft powerful prompts, generate creative assets, and supercharge your productivity.</p>
-                </div>
-                <SignedIn>
-                  <button onClick={() => { updateProgress('aiTools'); setCurrentPage('dashboard'); }} className="w-full py-3 bg-[#00f2fe] text-black font-bold text-sm rounded-xl hover:bg-[#00dfed] transition-all">Start Track & View Dashboard</button>
-                </SignedIn>
-                <SignedOut>
-                  <SignInButton mode="modal">
-                    <button className="w-full py-3 bg-[#00f2fe] text-black font-bold text-sm rounded-xl hover:bg-[#00dfed] transition-all">Sign in to Enroll</button>
-                  </SignInButton>
-                </SignedOut>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* RESOURCES PAGE */}
-        {currentPage === 'resources' && (
-          <div className="max-w-5xl mx-auto px-6 py-20 space-y-12">
-            <div>
-              <span className="text-xs font-mono text-[#00f2fe] tracking-widest uppercase block mb-3">LEARNING TOOLKIT</span>
-              <h1 className="text-4xl md:text-6xl font-extrabold text-white tracking-tight mb-4">Small tools. Big next moves.</h1>
-              <p className="text-slate-400 text-lg">Quick-start guides, cheat sheets, and project prompts for your creative journey.</p>
+              ))}
             </div>
           </div>
         )}
@@ -350,166 +368,233 @@ function MainContent() {
           </div>
         )}
 
-        {/* ADMIN INBOX PAGE (Only visible to ADMIN_EMAIL) */}
+        {/* ADMIN PANEL (Publish Courses & View Support Inbox) */}
         {currentPage === 'admin' && isAdmin && (
-          <div className="max-w-5xl mx-auto px-6 py-16 space-y-8">
-            <div className="p-8 rounded-3xl bg-[#121824] border border-teal-500/30 flex items-center justify-between">
+          <div className="max-w-5xl mx-auto px-6 py-16 space-y-12">
+            
+            {/* Publish Course Form */}
+            <div className="p-8 rounded-3xl bg-[#121824] border border-teal-500/30 space-y-6">
               <div>
-                <span className="text-xs font-mono text-teal-400 uppercase tracking-widest block mb-1">ADMIN CONTROL PANEL</span>
-                <h2 className="text-2xl md:text-3xl font-extrabold text-white">Support Inbox</h2>
-                <p className="text-sm text-slate-400 mt-1">Incoming messages from users seeking help.</p>
+                <span className="text-xs font-mono text-teal-400 uppercase tracking-widest block mb-1">ADMIN COURSE PUBLISHER</span>
+                <h2 className="text-2xl md:text-3xl font-extrabold text-white">Publish New Course to Website</h2>
+                <p className="text-sm text-slate-400 mt-1">Add a brand new course that will appear instantly on the Courses page.</p>
               </div>
-              <div className="px-4 py-2 rounded-xl bg-teal-500/10 text-teal-400 font-bold text-sm">
-                {supportRequests.length} Total Requests
-              </div>
-            </div>
 
-            <div className="space-y-4">
-              {supportRequests.length === 0 ? (
-                <div className="p-12 text-center rounded-3xl bg-[#121824] border border-slate-800 text-slate-400">
-                  No support requests found. All clear! 🚀
+              {courseSuccess && (
+                <div className="p-4 rounded-xl bg-teal-500/10 border border-teal-500/30 text-teal-400 text-sm flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5" /> Course published successfully!
                 </div>
-              ) : (
-                supportRequests.map((ticket) => (
-                  <div key={ticket.id} className="p-6 rounded-3xl bg-[#121824] border border-slate-800/80 space-y-4 flex flex-col justify-between">
-                    <div className="flex justify-between items-start">
+              )}
+
+              <form onSubmit={handlePublishCourse} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-mono text-slate-400 mb-2 uppercase">Course Title</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. Mobile App Development for Teens" 
+                    value={newCourseTitle} 
+                    onChange={(e) => setNewCourseTitle(e.target.value)} 
+                    className="w-full bg-[#0b0f17] border border-slate-800 rounded-xl px-4 py-3.5 text-sm text-white outline-none focus:border-teal-400" 
+                    required 
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-mono text-slate-400 mb-2 uppercase">Course Description</label>
+                  <textarea 
+                    rows="3" 
+                    placeholder="Write a brief overview of what students will learn..." 
+                    value={newCourseDesc} 
+                    onChange={(e) => setNewCourseDesc(e.target.value)} 
+                    className="w-full bg-[#0b0f17] border border-slate-800 rounded-xl p-4 text-sm text-white resize-none outline-none focus:border-teal-400" 
+                    required 
+                  ></textarea>
+                </div>
+                <button type="submit" className="px-6 py-3.5 bg-teal-400 text-black font-bold rounded-xl text-sm flex items-center gap-2 hover:bg-teal-300 transition-all">
+                  <PlusCircle className="w-5 h-5" /> Publish Course Now
+                </button>
+              </form>
+
+              {/* Manage Existing Published Courses */}
+              <div className="pt-6 border-t border-slate-800">
+                <h3 className="text-lg font-bold text-white mb-4">Manage Published Courses ({courses.length})</h3>
+                <div className="space-y-3">
+                  {courses.map((c) => (
+                    <div key={c.id} className="flex items-center justify-between p-4 rounded-2xl bg-[#0b0f17] border border-slate-800">
                       <div>
-                        <h4 className="text-lg font-bold text-white flex items-center gap-2">
-                          {ticket.name} <span className="text-xs font-normal text-slate-400">({ticket.email})</span>
-                        </h4>
-                        <span className="text-xs font-mono text-slate-500">{ticket.date}</span>
+                        <h4 className="text-sm font-bold text-white">{c.title}</h4>
+                        <p className="text-xs text-slate-400 truncate max-w-md">{c.desc}</p>
                       </div>
-                      <button onClick={() => deleteTicket(ticket.id)} className="p-2 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-all">
+                      <button onClick={() => deleteCourse(c.id)} className="p-2 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-all">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
-                    <p className="text-sm text-slate-300 bg-[#0b0f17] p-4 rounded-2xl border border-slate-800/60 leading-relaxed">
-                      {ticket.message}
-                    </p>
-                    <div className="flex justify-end">
-                      <a href={`mailto:${ticket.email}?subject=Reply to your SkillForge Support Request`} className="px-4 py-2 bg-[#00f2fe] text-black font-semibold text-xs rounded-xl hover:bg-[#00dfed] transition-all">
-                        Reply via Email
-                      </a>
-                    </div>
-                  </div>
-                ))
-              )}
+                  ))}
+                </div>
+              </div>
+
             </div>
+
+            {/* Support Inbox Section */}
+            <div className="p-8 rounded-3xl bg-[#121824] border border-teal-500/30 space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-mono text-teal-400 uppercase tracking-widest block mb-1">SUPPORT TICKETS</span>
+                  <h2 className="text-2xl font-extrabold text-white">Support Inbox</h2>
+                </div>
+                <div className="px-4 py-2 rounded-xl bg-teal-500/10 text-teal-400 font-bold text-sm">
+                  {supportRequests.length} Total Requests
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                {supportRequests.length === 0 ? (
+                  <div className="p-8 text-center rounded-2xl bg-[#0b0f17] border border-slate-800 text-slate-400 text-sm">
+                    No support requests found. All clear! 🚀
+                  </div>
+                ) : (
+                  supportRequests.map((ticket) => (
+                    <div key={ticket.id} className="p-6 rounded-3xl bg-[#0b0f17] border border-slate-800 space-y-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="text-lg font-bold text-white flex items-center gap-2">
+                            {ticket.name} <span className="text-xs font-normal text-slate-400">({ticket.email})</span>
+                          </h4>
+                          <span className="text-xs font-mono text-slate-500">{ticket.date}</span>
+                        </div>
+                        <button onClick={() => deleteTicket(ticket.id)} className="p-2 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-all">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <p className="text-sm text-slate-300 bg-[#121824] p-4 rounded-2xl border border-slate-800/60 leading-relaxed">
+                        {ticket.message}
+                      </p>
+                      <div className="flex justify-end">
+                        <a href={`mailto:${ticket.email}?subject=Reply to your SkillForge Support Request`} className="px-4 py-2 bg-[#00f2fe] text-black font-semibold text-xs rounded-xl hover:bg-[#00dfed] transition-all">
+                          Reply via Email
+                        </a>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
           </div>
         )}
 
-        {/* DASHBOARD PAGE */}
+        {/* DASHBOARD & USER SPACE PAGE */}
         {currentPage === 'dashboard' && (
           <SignedIn>
             <div className="max-w-5xl mx-auto px-6 py-16 space-y-10">
+              
+              {/* User Greeting Bar */}
               <div className="p-8 rounded-3xl bg-[#121824] border border-slate-800/80 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div>
                   <span className="text-xs font-mono text-[#00f2fe] uppercase tracking-widest block mb-1">STUDENT SPACE & VAULT</span>
-                  <h2 className="text-2xl md:text-3xl font-extrabold text-white">Welcome back, {user?.firstName || user?.username || 'Learner'}! 👋</h2>
+                  <h2 className="text-2xl md:text-3xl font-extrabold text-white">Welcome back, {profile.fullName || user?.firstName || 'Learner'}! 👋</h2>
                   <p className="text-sm text-slate-400 mt-1">{user?.primaryEmailAddress?.emailAddress}</p>
                 </div>
                 <UserButton afterSignOutUrl="/" />
               </div>
 
-              {/* Personal Tracks Progress & Certificates */}
+              {/* PROFILE SETUP */}
+              <div className="p-8 rounded-3xl bg-[#121824] border border-slate-800/80 space-y-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-[#00f2fe]/10 flex items-center justify-center text-[#00f2fe]">
+                    <User className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-white">Profile Setup & Info</h3>
+                    <p className="text-xs text-slate-400">Update your personal details, age, and bio.</p>
+                  </div>
+                </div>
+
+                {profileSuccess && (
+                  <div className="p-4 rounded-xl bg-teal-500/10 border border-teal-500/30 text-teal-400 text-sm flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5" /> Profile updated successfully!
+                  </div>
+                )}
+
+                <form onSubmit={handleProfileSave} className="space-y-5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                      <label className="block text-xs font-mono text-slate-400 mb-2 uppercase">Full Name / Display Name</label>
+                      <input 
+                        type="text" 
+                        value={profile.fullName} 
+                        onChange={(e) => setProfile({ ...profile, fullName: e.target.value })} 
+                        placeholder="e.g. Ayan Abdullah" 
+                        className="w-full bg-[#0b0f17] border border-slate-800 rounded-xl px-4 py-3.5 text-sm text-white outline-none focus:border-[#00f2fe]" 
+                        required 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-mono text-slate-400 mb-2 uppercase">Age</label>
+                      <input 
+                        type="number" 
+                        value={profile.age} 
+                        onChange={(e) => setProfile({ ...profile, age: e.target.value })} 
+                        placeholder="e.g. 17" 
+                        className="w-full bg-[#0b0f17] border border-slate-800 rounded-xl px-4 py-3.5 text-sm text-white outline-none focus:border-[#00f2fe]" 
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-mono text-slate-400 mb-2 uppercase">Short Bio / About Me</label>
+                    <textarea 
+                      rows="3" 
+                      value={profile.bio} 
+                      onChange={(e) => setProfile({ ...profile, bio: e.target.value })} 
+                      placeholder="Tell something about your interests, hobbies..." 
+                      className="w-full bg-[#0b0f17] border border-slate-800 rounded-xl p-4 text-sm text-white resize-none outline-none focus:border-[#00f2fe]"
+                    ></textarea>
+                  </div>
+
+                  <button type="submit" className="px-6 py-3 bg-[#00f2fe] text-black font-bold rounded-xl text-sm flex items-center gap-2 hover:bg-[#00dfed]">
+                    <Edit3 className="w-4 h-4" /> Save Profile
+                  </button>
+                </form>
+              </div>
+
+              {/* Dynamic User Progress & Certificates Section */}
               <div className="space-y-6">
                 <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                  <Trophy className="w-5 h-5 text-[#00f2fe]" /> Your Enrolled Tracks & Certificates
+                  <Trophy className="w-5 h-5 text-[#00f2fe]" /> Your Enrolled Tracks & Certificates Space
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  
-                  {/* Track 1 */}
-                  <div className="p-6 rounded-3xl bg-[#121824] border border-slate-800/80 space-y-4 flex flex-col justify-between">
-                    <div>
-                      <div className="flex justify-between items-center mb-2">
-                        <h4 className="text-lg font-bold text-white">Cybersecurity & Safety</h4>
-                        <span className="text-xs font-mono text-[#00f2fe] bg-[#00f2fe]/10 px-2.5 py-1 rounded-full">{progress.cybersecurity}% completed</span>
+                  {courses.map((course) => {
+                    const currentProgress = progress[course.id] || 0;
+                    return (
+                      <div key={course.id} className="p-6 rounded-3xl bg-[#121824] border border-slate-800/80 space-y-4 flex flex-col justify-between">
+                        <div>
+                          <div className="flex justify-between items-center mb-2">
+                            <h4 className="text-lg font-bold text-white">{course.title}</h4>
+                            <span className="text-xs font-mono text-[#00f2fe] bg-[#00f2fe]/10 px-2.5 py-1 rounded-full">{currentProgress}% completed</span>
+                          </div>
+                          <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden mt-3">
+                            <div className="bg-[#00f2fe] h-full transition-all duration-300" style={{ width: `${currentProgress}%` }}></div>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button onClick={() => updateProgress(course.id)} className="flex-1 py-2.5 bg-[#00f2fe] text-black font-semibold text-xs rounded-xl hover:bg-[#00dfed] transition-all">Advance Progress (+10%)</button>
+                          {currentProgress === 100 && (
+                            <button onClick={() => setActiveCertificate({ title: course.title, name: profile.fullName || user?.firstName || 'Learner' })} className="px-4 py-2.5 bg-teal-500/10 border border-teal-500/40 text-teal-400 font-bold text-xs rounded-xl flex items-center gap-1.5 hover:bg-teal-500/20">
+                              <Award className="w-4 h-4" /> Certificate
+                            </button>
+                          )}
+                        </div>
                       </div>
-                      <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden mt-3">
-                        <div className="bg-[#00f2fe] h-full transition-all duration-300" style={{ width: `${progress.cybersecurity}%` }}></div>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <button onClick={() => updateProgress('cybersecurity')} className="flex-1 py-2.5 bg-[#00f2fe] text-black font-semibold text-xs rounded-xl hover:bg-[#00dfed] transition-all">Advance (+10%)</button>
-                      {progress.cybersecurity === 100 && (
-                        <button onClick={() => setActiveCertificate({ title: 'Cybersecurity & Safety', name: user?.firstName || 'Learner' })} className="px-4 py-2.5 bg-teal-500/10 border border-teal-500/40 text-teal-400 font-bold text-xs rounded-xl flex items-center gap-1.5 hover:bg-teal-500/20">
-                          <Award className="w-4 h-4" /> Certificate
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {/* Track 2 */}
-                  <div className="p-6 rounded-3xl bg-[#121824] border border-slate-800/80 space-y-4 flex flex-col justify-between">
-                    <div>
-                      <div className="flex justify-between items-center mb-2">
-                        <h4 className="text-lg font-bold text-white">2D/3D Animation</h4>
-                        <span className="text-xs font-mono text-[#00f2fe] bg-[#00f2fe]/10 px-2.5 py-1 rounded-full">{progress.animation}% completed</span>
-                      </div>
-                      <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden mt-3">
-                        <div className="bg-[#00f2fe] h-full transition-all duration-300" style={{ width: `${progress.animation}%` }}></div>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <button onClick={() => updateProgress('animation')} className="flex-1 py-2.5 bg-[#00f2fe] text-black font-semibold text-xs rounded-xl hover:bg-[#00dfed] transition-all">Advance (+10%)</button>
-                      {progress.animation === 100 && (
-                        <button onClick={() => setActiveCertificate({ title: '2D/3D Animation', name: user?.firstName || 'Learner' })} className="px-4 py-2.5 bg-teal-500/10 border border-teal-500/40 text-teal-400 font-bold text-xs rounded-xl flex items-center gap-1.5 hover:bg-teal-500/20">
-                          <Award className="w-4 h-4" /> Certificate
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Track 3 */}
-                  <div className="p-6 rounded-3xl bg-[#121824] border border-slate-800/80 space-y-4 flex flex-col justify-between">
-                    <div>
-                      <div className="flex justify-between items-center mb-2">
-                        <h4 className="text-lg font-bold text-white">Creative Storytelling</h4>
-                        <span className="text-xs font-mono text-[#00f2fe] bg-[#00f2fe]/10 px-2.5 py-1 rounded-full">{progress.storytelling}% completed</span>
-                      </div>
-                      <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden mt-3">
-                        <div className="bg-[#00f2fe] h-full transition-all duration-300" style={{ width: `${progress.storytelling}%` }}></div>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <button onClick={() => updateProgress('storytelling')} className="flex-1 py-2.5 bg-[#00f2fe] text-black font-semibold text-xs rounded-xl hover:bg-[#00dfed] transition-all">Advance (+10%)</button>
-                      {progress.storytelling === 100 && (
-                        <button onClick={() => setActiveCertificate({ title: 'Creative Storytelling', name: user?.firstName || 'Learner' })} className="px-4 py-2.5 bg-teal-500/10 border border-teal-500/40 text-teal-400 font-bold text-xs rounded-xl flex items-center gap-1.5 hover:bg-teal-500/20">
-                          <Award className="w-4 h-4" /> Certificate
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Track 4 */}
-                  <div className="p-6 rounded-3xl bg-[#121824] border border-slate-800/80 space-y-4 flex flex-col justify-between">
-                    <div>
-                      <div className="flex justify-between items-center mb-2">
-                        <h4 className="text-lg font-bold text-white">AI Tools & Prompting</h4>
-                        <span className="text-xs font-mono text-[#00f2fe] bg-[#00f2fe]/10 px-2.5 py-1 rounded-full">{progress.aiTools}% completed</span>
-                      </div>
-                      <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden mt-3">
-                        <div className="bg-[#00f2fe] h-full transition-all duration-300" style={{ width: `${progress.aiTools}%` }}></div>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <button onClick={() => updateProgress('aiTools')} className="flex-1 py-2.5 bg-[#00f2fe] text-black font-semibold text-xs rounded-xl hover:bg-[#00dfed] transition-all">Advance (+10%)</button>
-                      {progress.aiTools === 100 && (
-                        <button onClick={() => setActiveCertificate({ title: 'AI Tools & Prompting', name: user?.firstName || 'Learner' })} className="px-4 py-2.5 bg-teal-500/10 border border-teal-500/40 text-teal-400 font-bold text-xs rounded-xl flex items-center gap-1.5 hover:bg-teal-500/20">
-                          <Award className="w-4 h-4" /> Certificate
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
+                    );
+                  })}
                 </div>
               </div>
 
-              {/* Real-Time Community Leaderboard Wall */}
+              {/* Community Leaderboard */}
               <div className="p-8 rounded-3xl bg-[#121824] border border-slate-800/80 space-y-6">
                 <div className="flex items-center gap-3">
                   <Users className="w-6 h-6 text-[#00f2fe]" />
-                  <h3 className="text-xl font-bold text-white">Live Community Leaderboard (All Users)</h3>
+                  <h3 className="text-xl font-bold text-white">Live Community Leaderboard</h3>
                 </div>
                 <div className="space-y-3">
                   {leaderboard
@@ -518,7 +603,7 @@ function MainContent() {
                       <div key={index} className="flex items-center justify-between p-4 rounded-2xl bg-[#0b0f17] border border-slate-800">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-[#00f2fe]/10 text-[#00f2fe] font-bold flex items-center justify-center text-sm">
-                            {item.name.charAt(0)}
+                            {item.name ? item.name.charAt(0) : 'U'}
                           </div>
                           <div>
                             <p className="text-sm font-semibold text-white">{item.name} {item.id === user?.id && <span className="text-xs text-[#00f2fe] font-mono">(You)</span>}</p>
@@ -531,7 +616,7 @@ function MainContent() {
                 </div>
               </div>
 
-              {/* Feedback Form */}
+              {/* Feedback */}
               <form onSubmit={handleFeedbackSubmit} className="p-8 rounded-3xl bg-[#121824] border border-slate-800/80 space-y-5">
                 <h3 className="text-xl font-bold text-white">How is your experience so far?</h3>
                 <div className="flex gap-1.5 text-[#00f2fe]">
@@ -545,12 +630,13 @@ function MainContent() {
                 <textarea rows="4" placeholder="Tell us what's working..." value={feedbackText} onChange={(e) => setFeedbackText(e.target.value)} className="w-full bg-[#0b0f17] border border-slate-800 rounded-xl p-4 text-sm text-white resize-none outline-none"></textarea>
                 <button type="submit" className="px-6 py-3 bg-[#00f2fe] text-black font-bold rounded-xl text-sm">Submit Feedback</button>
               </form>
+
             </div>
           </SignedIn>
         )}
       </main>
 
-      {/* CERTIFICATE MODAL POPUP */}
+      {/* CERTIFICATE MODAL */}
       {activeCertificate && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="relative max-w-2xl w-full bg-[#121824] border border-[#00f2fe]/40 rounded-3xl p-8 md:p-12 text-center space-y-6 shadow-2xl">
@@ -572,7 +658,7 @@ function MainContent() {
             </p>
             <div className="pt-4 flex items-center justify-center gap-4">
               <button onClick={() => alert("Certificate downloaded successfully!")} className="px-6 py-3 bg-[#00f2fe] text-black font-bold rounded-xl text-sm flex items-center gap-2 hover:bg-[#00dfed]">
-                <Download className="w-4 h-4" /> Download Certificate
+                <Award className="w-4 h-4" /> Download Certificate
               </button>
             </div>
           </div>
