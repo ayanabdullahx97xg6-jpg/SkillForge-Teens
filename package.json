@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.61.9",
+    "firebase": "^12.18.0",
     "lucide-react": "latest",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"

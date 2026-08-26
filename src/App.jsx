@@ -2,8 +2,24 @@ import React, { useState, useEffect } from 'react';
 import { Shield, Sparkles, BookOpen, Bot, ArrowRight, Star, Trophy, Users, CheckCircle, Award, X, Inbox, Trash2, User, Edit3, PlusCircle } from 'lucide-react';
 import { ClerkProvider, SignedIn, SignedOut, SignInButton, SignUpButton, UserButton, useUser } from '@clerk/clerk-react';
 
-const clerkPubKey = "pk_test_ZXZvbHZpbmctZG92ZS03MzA0LmNsZXJrLmFjY291bnRzLmRldiQ";
+// Firebase Imports
+import { initializeApp } from "firebase/app";
+import { getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, deleteDoc } from "firebase/firestore";
 
+// Firebase Configuration Keys
+const firebaseConfig = {
+  apiKey: "AIzaSyAY0iT-cDOG88pN1c4zjW39aXo7Bfh46ws",
+  authDomain: "skillforge-teens.firebaseapp.com",
+  projectId: "skillforge-teens",
+  storageBucket: "skillforge-teens.firebasestorage.app",
+  messagingSenderId: "563140064594",
+  appId: "1:563140064594:web:148eaedbc95c5a50c1368b"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const clerkPubKey = "pk_test_ZXZvbHZpbmctZG92ZS03MzA0LmNsZXJrLmFjY291bnRzLmRldiQ";
 const ADMIN_EMAIL = "ayanabdullahx967xg6@gmail.com"; 
 
 export default function App() {
@@ -20,121 +36,135 @@ function MainContent() {
 
   const isAdmin = user && user.primaryEmailAddress?.emailAddress === ADMIN_EMAIL;
 
-  // Dynamic Courses List (Admin can add new courses)
-  const [courses, setCourses] = useState(() => {
-    const saved = localStorage.getItem('skillforge_courses');
-    return saved ? JSON.parse(saved) : [
-      { id: 'cybersecurity', title: 'Cybersecurity & Safety', desc: 'Practice smart digital habits, understand encryption basics, and learn how to secure your online presence against modern threats.' },
-      { id: 'animation', title: '2D/3D Animation', desc: 'Bring original characters to life using industry-standard principles of motion, keyframing, and basic modeling.' },
-      { id: 'storytelling', title: 'Creative Storytelling', desc: 'Master the art of digital writing, script formatting, world-building, and engaging media production for modern platforms.' },
-      { id: 'aiTools', title: 'AI Tools & Prompting', desc: 'Learn how to leverage AI ethically, craft powerful prompts, generate creative assets, and supercharge your productivity.' },
-    ];
-  });
+  // Default Courses Fallback
+  const defaultCourses = [
+    { id: 'cybersecurity', title: 'Cybersecurity & Safety', desc: 'Practice smart digital habits, understand encryption basics, and learn how to secure your online presence against modern threats.' },
+    { id: 'animation', title: '2D/3D Animation', desc: 'Bring original characters to life using industry-standard principles of motion, keyframing, and basic modeling.' },
+    { id: 'storytelling', title: 'Creative Storytelling', desc: 'Master the art of digital writing, script formatting, world-building, and engaging media production for modern platforms.' },
+    { id: 'aiTools', title: 'AI Tools & Prompting', desc: 'Learn how to leverage AI ethically, craft powerful prompts, generate creative assets, and supercharge your productivity.' },
+  ];
+
+  const [courses, setCourses] = useState(defaultCourses);
+
+  // Fetch Courses from Firebase
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "courses"));
+        if (!querySnapshot.empty) {
+          const loadedCourses = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setCourses(loadedCourses);
+        }
+      } catch (e) {
+        console.log("Using default courses");
+      }
+    };
+    fetchCourses();
+  }, []);
 
   // Admin New Course Form States
   const [newCourseTitle, setNewCourseTitle] = useState('');
   const [newCourseDesc, setNewCourseDesc] = useState('');
   const [courseSuccess, setCourseSuccess] = useState(false);
 
-  const handlePublishCourse = (e) => {
+  const handlePublishCourse = async (e) => {
     e.preventDefault();
     if (!newCourseTitle || !newCourseDesc) return;
 
-    const courseKey = 'course_' + Date.now();
-    const newCourseObj = {
-      id: courseKey,
-      title: newCourseTitle,
-      desc: newCourseDesc
-    };
+    try {
+      const newDocRef = await addDoc(collection(db, "courses"), {
+        title: newCourseTitle,
+        desc: newCourseDesc
+      });
 
-    const updatedCourses = [...courses, newCourseObj];
-    setCourses(updatedCourses);
-    localStorage.setItem('skillforge_courses', JSON.stringify(updatedCourses));
+      const newCourseObj = { id: newDocRef.id, title: newCourseTitle, desc: newCourseDesc };
+      const updatedCourses = [...courses, newCourseObj];
+      setCourses(updatedCourses);
 
-    setNewCourseTitle('');
-    setNewCourseDesc('');
-    setCourseSuccess(true);
-    setTimeout(() => setCourseSuccess(false), 4000);
+      setNewCourseTitle('');
+      setNewCourseDesc('');
+      setCourseSuccess(true);
+      setTimeout(() => setCourseSuccess(false), 4000);
+    } catch (error) {
+      alert("Error publishing course: " + error.message);
+    }
   };
 
-  const deleteCourse = (id) => {
-    const filtered = courses.filter(c => c.id !== id);
-    setCourses(filtered);
-    localStorage.setItem('skillforge_courses', JSON.stringify(filtered));
+  const deleteCourse = async (id) => {
+    try {
+      await deleteDoc(doc(db, "courses", id));
+      const filtered = courses.filter(c => c.id !== id);
+      setCourses(filtered);
+    } catch (error) {
+      alert("Error deleting course");
+    }
   };
 
   // Profile State
-  const [profile, setProfile] = useState(() => {
-    if (!user) return { fullName: '', age: '', bio: '' };
-    const saved = localStorage.getItem(`profile_${user.id}`);
-    return saved ? JSON.parse(saved) : { fullName: user.firstName || '', age: '', bio: '' };
-  });
+  const [profile, setProfile] = useState({ fullName: '', age: '', bio: '' });
   const [profileSuccess, setProfileSuccess] = useState(false);
 
   useEffect(() => {
     if (user) {
-      const savedProfile = localStorage.getItem(`profile_${user.id}`);
-      if (!savedProfile && user.firstName) {
-        setProfile(prev => ({ ...prev, fullName: user.firstName }));
-      }
+      const fetchProfile = async () => {
+        try {
+          const docRef = doc(db, "profiles", user.id);
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            setProfile(docSnap.data());
+          } else {
+            setProfile({ fullName: user.firstName || '', age: '', bio: '' });
+          }
+        } catch (e) {
+          console.error("Error fetching profile");
+        }
+      };
+      fetchProfile();
     }
   }, [user]);
 
-  const handleProfileSave = (e) => {
+  const handleProfileSave = async (e) => {
     e.preventDefault();
     if (!user) return;
-    localStorage.setItem(`profile_${user.id}`, JSON.stringify(profile));
-    setProfileSuccess(true);
-    setTimeout(() => setProfileSuccess(false), 4000);
+    try {
+      await setDoc(doc(db, "profiles", user.id), profile);
+      setProfileSuccess(true);
+      setTimeout(() => setProfileSuccess(false), 4000);
 
-    const userName = profile.fullName || user.firstName || 'Learner';
-    updateLeaderboardName(user.id, userName);
-  };
-
-  const updateLeaderboardName = (userId, newName) => {
-    setLeaderboard(prev => {
-      const updated = prev.map(item => item.id === userId ? { ...item, name: newName } : item);
-      localStorage.setItem('skillforge_community_leaderboard', JSON.stringify(updated));
-      return updated;
-    });
+      const userName = profile.fullName || user.firstName || 'Learner';
+      updateLeaderboardInStorage(user.id, userName, progress);
+    } catch (error) {
+      alert("Error saving profile");
+    }
   };
 
   // Leaderboard State
-  const [leaderboard, setLeaderboard] = useState(() => {
-    const saved = localStorage.getItem('skillforge_community_leaderboard');
-    return saved ? JSON.parse(saved) : [
-      { id: 'david', name: 'David', track: 'Cybersecurity & Safety', progress: 90 },
-      { id: 'ayesha', name: 'Ayesha', track: '2D/3D Animation', progress: 75 },
-    ];
-  });
+  const [leaderboard, setLeaderboard] = useState([
+    { id: 'david', name: 'David', track: 'Cybersecurity & Safety', progress: 90 },
+    { id: 'ayesha', name: 'Ayesha', track: '2D/3D Animation', progress: 75 },
+  ]);
 
   // Dynamic User Progress State
-  const [progress, setProgress] = useState(() => {
-    if (!user) return {};
-    const saved = localStorage.getItem(`progress_${user.id}`);
-    return saved ? JSON.parse(saved) : {};
-  });
-
-  // Support Requests State (Admin Inbox)
-  const [supportRequests, setSupportRequests] = useState(() => {
-    const saved = localStorage.getItem('skillforge_support_requests');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [activeCertificate, setActiveCertificate] = useState(null);
+  const [progress, setProgress] = useState({});
 
   useEffect(() => {
     if (user) {
-      const saved = localStorage.getItem(`progress_${user.id}`);
-      const userName = profile.fullName || user.firstName || user.username || 'Learner';
-      
-      if (saved) {
-        const parsedProgress = JSON.parse(saved);
-        setProgress(parsedProgress);
-        updateLeaderboardInStorage(user.id, userName, parsedProgress);
-      } else {
-        updateLeaderboardInStorage(user.id, userName, progress);
-      }
+      const fetchProgress = async () => {
+        try {
+          const docRef = doc(db, "progress", user.id);
+          const docSnap = await getDoc(docRef);
+          const userName = profile.fullName || user.firstName || user.username || 'Learner';
+          
+          if (docSnap.exists()) {
+            const parsedProgress = docSnap.data();
+            setProgress(parsedProgress);
+            updateLeaderboardInStorage(user.id, userName, parsedProgress);
+          }
+        } catch (e) {
+          console.error("Error fetching progress");
+        }
+      };
+      fetchProgress();
     }
   }, [user]);
 
@@ -162,12 +192,11 @@ function MainContent() {
       } else {
         updated = [...prev, { id: userId, name: userName, track: topTrackName, progress: topVal }];
       }
-      localStorage.setItem('skillforge_community_leaderboard', JSON.stringify(updated));
       return updated;
     });
   };
 
-  const updateProgress = (courseId) => {
+  const updateProgress = async (courseId) => {
     if (!user) return;
     const currentVal = progress[courseId] || 0;
     const updated = {
@@ -175,11 +204,33 @@ function MainContent() {
       [courseId]: Math.min(100, currentVal + 10)
     };
     setProgress(updated);
-    localStorage.setItem(`progress_${user.id}`, JSON.stringify(updated));
     
-    const userName = profile.fullName || user.firstName || user.username || 'Learner';
-    updateLeaderboardInStorage(user.id, userName, updated);
+    try {
+      await setDoc(doc(db, "progress", user.id), updated);
+      const userName = profile.fullName || user.firstName || user.username || 'Learner';
+      updateLeaderboardInStorage(user.id, userName, updated);
+    } catch (e) {
+      console.error("Error saving progress");
+    }
   };
+
+  // Support Requests State (Admin Inbox)
+  const [supportRequests, setSupportRequests] = useState([]);
+
+  useEffect(() => {
+    const fetchSupport = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "supportRequests"));
+        const tickets = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setSupportRequests(tickets);
+      } catch (e) {
+        console.log("Error loading support tickets");
+      }
+    };
+    fetchSupport();
+  }, []);
+
+  const [activeCertificate, setActiveCertificate] = useState(null);
 
   // Support Form State
   const [supportName, setSupportName] = useState('');
@@ -187,44 +238,38 @@ function MainContent() {
   const [supportMessage, setSupportMessage] = useState('');
   const [supportSuccess, setSupportSuccess] = useState(false);
 
-  const handleSupportSubmit = (e) => {
+  const handleSupportSubmit = async (e) => {
     e.preventDefault();
     if (!supportName || !supportEmail || !supportMessage) return;
 
-    const newTicket = {
-      id: Date.now(),
-      name: supportName,
-      email: supportEmail,
-      message: supportMessage,
-      date: new Date().toLocaleString()
-    };
-
-    const updatedRequests = [newTicket, ...supportRequests];
-    setSupportRequests(updatedRequests);
-    localStorage.setItem('skillforge_support_requests', JSON.stringify(updatedRequests));
-
-    setSupportSuccess(true);
-    setSupportName('');
-    setSupportEmail('');
-    setSupportMessage('');
-    setTimeout(() => setSupportSuccess(false), 5000);
+    try {
+      const newTicket = {
+        name: supportName,
+        email: supportEmail,
+        message: supportMessage,
+        date: new Date().toLocaleString()
+      };
+      const docRef = await addDoc(collection(db, "supportRequests"), newTicket);
+      setSupportRequests([{ id: docRef.id, ...newTicket }, ...supportRequests]);
+      
+      setSupportSuccess(true);
+      setSupportName('');
+      setSupportEmail('');
+      setSupportMessage('');
+      setTimeout(() => setSupportSuccess(false), 5000);
+    } catch (error) {
+      alert("Error sending support ticket");
+    }
   };
 
-  const deleteTicket = (id) => {
-    const filtered = supportRequests.filter(item => item.id !== id);
-    setSupportRequests(filtered);
-    localStorage.setItem('skillforge_support_requests', JSON.stringify(filtered));
-  };
-
-  const [feedbackText, setFeedbackText] = useState('');
-  const [feedbackSuccess, setFeedbackSuccess] = useState(false);
-
-  const handleFeedbackSubmit = (e) => {
-    e.preventDefault();
-    if (!feedbackText.trim()) return;
-    setFeedbackSuccess(true);
-    setFeedbackText('');
-    setTimeout(() => setFeedbackSuccess(false), 5000);
+  const deleteTicket = async (id) => {
+    try {
+      await deleteDoc(doc(db, "supportRequests", id));
+      const filtered = supportRequests.filter(item => item.id !== id);
+      setSupportRequests(filtered);
+    } catch (e) {
+      alert("Error deleting ticket");
+    }
   };
 
   return (
@@ -277,14 +322,14 @@ function MainContent() {
           <section className="relative px-6 pt-20 pb-32 text-center overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-b from-[#00f2fe]/10 via-transparent to-transparent pointer-events-none blur-3xl max-w-2xl mx-auto h-96"></div>
             <div className="inline-block px-4 py-1.5 mb-6 text-xs font-semibold tracking-wide text-[#00f2fe] uppercase bg-[#00f2fe]/10 border border-[#00f2fe]/30 rounded-full">
-              Built with teens. Built for what's next.
+              Cloud Database Powered by Firebase 🔥
             </div>
             <h1 className="text-5xl md:text-7xl font-extrabold text-white tracking-tight max-w-4xl mx-auto mb-6 leading-tight">
               Discover Your Superpower <br className="hidden md:block"/>
               <span className="text-[#00f2fe]">– By Teens, For Teens</span>
             </h1>
             <p className="text-slate-400 text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
-              SkillForge Teens helps you explore the tech and creative skills that feel like you — with guided pathways, interactive tracks, and real projects.
+              SkillForge Teens helps you explore tech and creative skills with permanent cloud storage for your progress and certificates.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <button onClick={() => setCurrentPage('courses')} className="px-8 py-4 bg-[#00f2fe] text-black font-bold rounded-xl hover:bg-[#00dfed] transition-all flex items-center gap-3 shadow-lg shadow-[#00f2fe]/20 text-lg">
@@ -303,16 +348,16 @@ function MainContent() {
             <div className="space-y-6">
               <span className="text-xs font-mono text-[#00f2fe] tracking-widest uppercase block">OUR MISSION</span>
               <h1 className="text-4xl md:text-6xl font-extrabold text-white tracking-tight leading-tight">
-                Big curiosity deserves a real place to grow.
+                Big curiosity deserves permanent cloud storage.
               </h1>
               <p className="text-slate-400 text-lg md:text-xl leading-relaxed">
-                SkillForge Teens is built from the ground up for young people who want to explore what they can make, protect, tell, and change in today's digital world.
+                All data is now securely saved in Firebase cloud database.
               </p>
             </div>
           </div>
         )}
 
-        {/* COURSES PAGE (Dynamic Courses Published by Admin) */}
+        {/* COURSES PAGE */}
         {currentPage === 'courses' && (
           <div className="max-w-6xl mx-auto px-6 py-20 space-y-12">
             <div>
@@ -357,7 +402,7 @@ function MainContent() {
             <form onSubmit={handleSupportSubmit} className="p-8 md:p-10 rounded-3xl bg-[#121824] border border-slate-800/80 space-y-6">
               {supportSuccess && (
                 <div className="p-4 rounded-xl bg-teal-500/10 border border-teal-500/30 text-teal-400 text-sm flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5" /> Support request sent to Admin successfully!
+                  <CheckCircle className="w-5 h-5" /> Support request sent to Firebase Database successfully!
                 </div>
               )}
               <input type="text" placeholder="Name" value={supportName} onChange={(e) => setSupportName(e.target.value)} className="w-full bg-[#0b0f17] border border-slate-800 rounded-xl px-4 py-3.5 text-sm text-white outline-none" required />
@@ -368,53 +413,44 @@ function MainContent() {
           </div>
         )}
 
-        {/* ADMIN PANEL (Publish Courses & View Support Inbox) */}
+        {/* ADMIN PANEL */}
         {currentPage === 'admin' && isAdmin && (
           <div className="max-w-5xl mx-auto px-6 py-16 space-y-12">
             
-            {/* Publish Course Form */}
             <div className="p-8 rounded-3xl bg-[#121824] border border-teal-500/30 space-y-6">
               <div>
                 <span className="text-xs font-mono text-teal-400 uppercase tracking-widest block mb-1">ADMIN COURSE PUBLISHER</span>
-                <h2 className="text-2xl md:text-3xl font-extrabold text-white">Publish New Course to Website</h2>
-                <p className="text-sm text-slate-400 mt-1">Add a brand new course that will appear instantly on the Courses page.</p>
+                <h2 className="text-2xl md:text-3xl font-extrabold text-white">Publish New Course to Firebase</h2>
               </div>
 
               {courseSuccess && (
                 <div className="p-4 rounded-xl bg-teal-500/10 border border-teal-500/30 text-teal-400 text-sm flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5" /> Course published successfully!
+                  <CheckCircle className="w-5 h-5" /> Course published to Firestore successfully!
                 </div>
               )}
 
               <form onSubmit={handlePublishCourse} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-mono text-slate-400 mb-2 uppercase">Course Title</label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. Mobile App Development for Teens" 
-                    value={newCourseTitle} 
-                    onChange={(e) => setNewCourseTitle(e.target.value)} 
-                    className="w-full bg-[#0b0f17] border border-slate-800 rounded-xl px-4 py-3.5 text-sm text-white outline-none focus:border-teal-400" 
-                    required 
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-mono text-slate-400 mb-2 uppercase">Course Description</label>
-                  <textarea 
-                    rows="3" 
-                    placeholder="Write a brief overview of what students will learn..." 
-                    value={newCourseDesc} 
-                    onChange={(e) => setNewCourseDesc(e.target.value)} 
-                    className="w-full bg-[#0b0f17] border border-slate-800 rounded-xl p-4 text-sm text-white resize-none outline-none focus:border-teal-400" 
-                    required 
-                  ></textarea>
-                </div>
-                <button type="submit" className="px-6 py-3.5 bg-teal-400 text-black font-bold rounded-xl text-sm flex items-center gap-2 hover:bg-teal-300 transition-all">
+                <input 
+                  type="text" 
+                  placeholder="Course Title" 
+                  value={newCourseTitle} 
+                  onChange={(e) => setNewCourseTitle(e.target.value)} 
+                  className="w-full bg-[#0b0f17] border border-slate-800 rounded-xl px-4 py-3.5 text-sm text-white outline-none" 
+                  required 
+                />
+                <textarea 
+                  rows="3" 
+                  placeholder="Course Description" 
+                  value={newCourseDesc} 
+                  onChange={(e) => setNewCourseDesc(e.target.value)} 
+                  className="w-full bg-[#0b0f17] border border-slate-800 rounded-xl p-4 text-sm text-white resize-none outline-none" 
+                  required 
+                ></textarea>
+                <button type="submit" className="px-6 py-3.5 bg-teal-400 text-black font-bold rounded-xl text-sm flex items-center gap-2">
                   <PlusCircle className="w-5 h-5" /> Publish Course Now
                 </button>
               </form>
 
-              {/* Manage Existing Published Courses */}
               <div className="pt-6 border-t border-slate-800">
                 <h3 className="text-lg font-bold text-white mb-4">Manage Published Courses ({courses.length})</h3>
                 <div className="space-y-3">
@@ -424,17 +460,15 @@ function MainContent() {
                         <h4 className="text-sm font-bold text-white">{c.title}</h4>
                         <p className="text-xs text-slate-400 truncate max-w-md">{c.desc}</p>
                       </div>
-                      <button onClick={() => deleteCourse(c.id)} className="p-2 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-all">
+                      <button onClick={() => deleteCourse(c.id)} className="p-2 rounded-xl bg-rose-500/10 text-rose-400">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   ))}
                 </div>
               </div>
-
             </div>
 
-            {/* Support Inbox Section */}
             <div className="p-8 rounded-3xl bg-[#121824] border border-teal-500/30 space-y-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -461,18 +495,13 @@ function MainContent() {
                           </h4>
                           <span className="text-xs font-mono text-slate-500">{ticket.date}</span>
                         </div>
-                        <button onClick={() => deleteTicket(ticket.id)} className="p-2 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-all">
+                        <button onClick={() => deleteTicket(ticket.id)} className="p-2 rounded-xl bg-rose-500/10 text-rose-400">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                       <p className="text-sm text-slate-300 bg-[#121824] p-4 rounded-2xl border border-slate-800/60 leading-relaxed">
                         {ticket.message}
                       </p>
-                      <div className="flex justify-end">
-                        <a href={`mailto:${ticket.email}?subject=Reply to your SkillForge Support Request`} className="px-4 py-2 bg-[#00f2fe] text-black font-semibold text-xs rounded-xl hover:bg-[#00dfed] transition-all">
-                          Reply via Email
-                        </a>
-                      </div>
                     </div>
                   ))
                 )}
@@ -482,82 +511,56 @@ function MainContent() {
           </div>
         )}
 
-        {/* DASHBOARD & USER SPACE PAGE */}
+        {/* DASHBOARD PAGE */}
         {currentPage === 'dashboard' && (
           <SignedIn>
             <div className="max-w-5xl mx-auto px-6 py-16 space-y-10">
               
-              {/* User Greeting Bar */}
               <div className="p-8 rounded-3xl bg-[#121824] border border-slate-800/80 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div>
-                  <span className="text-xs font-mono text-[#00f2fe] uppercase tracking-widest block mb-1">STUDENT SPACE & VAULT</span>
+                  <span className="text-xs font-mono text-[#00f2fe] uppercase tracking-widest block mb-1">STUDENT CLOUD SPACE</span>
                   <h2 className="text-2xl md:text-3xl font-extrabold text-white">Welcome back, {profile.fullName || user?.firstName || 'Learner'}! 👋</h2>
                   <p className="text-sm text-slate-400 mt-1">{user?.primaryEmailAddress?.emailAddress}</p>
                 </div>
                 <UserButton afterSignOutUrl="/" />
               </div>
 
-              {/* PROFILE SETUP */}
               <div className="p-8 rounded-3xl bg-[#121824] border border-slate-800/80 space-y-6">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-[#00f2fe]/10 flex items-center justify-center text-[#00f2fe]">
-                    <User className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-white">Profile Setup & Info</h3>
-                    <p className="text-xs text-slate-400">Update your personal details, age, and bio.</p>
-                  </div>
-                </div>
-
+                <h3 className="text-xl font-bold text-white">Profile Setup (Cloud Synced)</h3>
                 {profileSuccess && (
                   <div className="p-4 rounded-xl bg-teal-500/10 border border-teal-500/30 text-teal-400 text-sm flex items-center gap-2">
-                    <CheckCircle className="w-5 h-5" /> Profile updated successfully!
+                    <CheckCircle className="w-5 h-5" /> Saved to Firebase Cloud successfully!
                   </div>
                 )}
-
                 <form onSubmit={handleProfileSave} className="space-y-5">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div>
-                      <label className="block text-xs font-mono text-slate-400 mb-2 uppercase">Full Name / Display Name</label>
-                      <input 
-                        type="text" 
-                        value={profile.fullName} 
-                        onChange={(e) => setProfile({ ...profile, fullName: e.target.value })} 
-                        placeholder="e.g. Ayan Abdullah" 
-                        className="w-full bg-[#0b0f17] border border-slate-800 rounded-xl px-4 py-3.5 text-sm text-white outline-none focus:border-[#00f2fe]" 
-                        required 
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-mono text-slate-400 mb-2 uppercase">Age</label>
-                      <input 
-                        type="number" 
-                        value={profile.age} 
-                        onChange={(e) => setProfile({ ...profile, age: e.target.value })} 
-                        placeholder="e.g. 17" 
-                        className="w-full bg-[#0b0f17] border border-slate-800 rounded-xl px-4 py-3.5 text-sm text-white outline-none focus:border-[#00f2fe]" 
-                      />
-                    </div>
+                    <input 
+                      type="text" 
+                      value={profile.fullName} 
+                      onChange={(e) => setProfile({ ...profile, fullName: e.target.value })} 
+                      placeholder="Full Name" 
+                      className="w-full bg-[#0b0f17] border border-slate-800 rounded-xl px-4 py-3.5 text-sm text-white outline-none" 
+                      required 
+                    />
+                    <input 
+                      type="number" 
+                      value={profile.age} 
+                      onChange={(e) => setProfile({ ...profile, age: e.target.value })} 
+                      placeholder="Age" 
+                      className="w-full bg-[#0b0f17] border border-slate-800 rounded-xl px-4 py-3.5 text-sm text-white outline-none" 
+                    />
                   </div>
-
-                  <div>
-                    <label className="block text-xs font-mono text-slate-400 mb-2 uppercase">Short Bio / About Me</label>
-                    <textarea 
-                      rows="3" 
-                      value={profile.bio} 
-                      onChange={(e) => setProfile({ ...profile, bio: e.target.value })} 
-                      placeholder="Tell something about your interests, hobbies..." 
-                      className="w-full bg-[#0b0f17] border border-slate-800 rounded-xl p-4 text-sm text-white resize-none outline-none focus:border-[#00f2fe]"
-                    ></textarea>
-                  </div>
-
-                  <button type="submit" className="px-6 py-3 bg-[#00f2fe] text-black font-bold rounded-xl text-sm flex items-center gap-2 hover:bg-[#00dfed]">
-                    <Edit3 className="w-4 h-4" /> Save Profile
-                  </button>
+                  <textarea 
+                    rows="3" 
+                    value={profile.bio} 
+                    onChange={(e) => setProfile({ ...profile, bio: e.target.value })} 
+                    placeholder="Bio" 
+                    className="w-full bg-[#0b0f17] border border-slate-800 rounded-xl p-4 text-sm text-white outline-none"
+                  ></textarea>
+                  <button type="submit" className="px-6 py-3 bg-[#00f2fe] text-black font-bold rounded-xl text-sm">Save Profile to Cloud</button>
                 </form>
               </div>
 
-              {/* Dynamic User Progress & Certificates Section */}
               <div className="space-y-6">
                 <h3 className="text-xl font-bold text-white flex items-center gap-2">
                   <Trophy className="w-5 h-5 text-[#00f2fe]" /> Your Enrolled Tracks & Certificates Space
@@ -577,9 +580,9 @@ function MainContent() {
                           </div>
                         </div>
                         <div className="flex gap-2">
-                          <button onClick={() => updateProgress(course.id)} className="flex-1 py-2.5 bg-[#00f2fe] text-black font-semibold text-xs rounded-xl hover:bg-[#00dfed] transition-all">Advance Progress (+10%)</button>
+                          <button onClick={() => updateProgress(course.id)} className="flex-1 py-2.5 bg-[#00f2fe] text-black font-semibold text-xs rounded-xl">Advance Progress (+10%)</button>
                           {currentProgress === 100 && (
-                            <button onClick={() => setActiveCertificate({ title: course.title, name: profile.fullName || user?.firstName || 'Learner' })} className="px-4 py-2.5 bg-teal-500/10 border border-teal-500/40 text-teal-400 font-bold text-xs rounded-xl flex items-center gap-1.5 hover:bg-teal-500/20">
+                            <button onClick={() => setActiveCertificate({ title: course.title, name: profile.fullName || user?.firstName || 'Learner' })} className="px-4 py-2.5 bg-teal-500/10 text-teal-400 font-bold text-xs rounded-xl flex items-center gap-1.5">
                               <Award className="w-4 h-4" /> Certificate
                             </button>
                           )}
@@ -606,61 +609,35 @@ function MainContent() {
                             {item.name ? item.name.charAt(0) : 'U'}
                           </div>
                           <div>
-                            <p className="text-sm font-semibold text-white">{item.name} {item.id === user?.id && <span className="text-xs text-[#00f2fe] font-mono">(You)</span>}</p>
-                            <p className="text-xs text-slate-400">Top Track: {item.track}</p>
+                            <p className="text-sm font-semibold text-white">
+                              {item.name} {item.id === user?.id && <span className="text-xs text-[#00f2fe]">(You)</span>}
+                            </p>
+                            <p className="text-xs text-slate-400">{item.track}</p>
                           </div>
                         </div>
-                        <span className="text-xs font-mono text-[#00f2fe] bg-[#00f2fe]/10 px-3 py-1.5 rounded-full">{item.progress}% Completed</span>
+                        <span className="text-xs font-mono text-[#00f2fe] bg-[#00f2fe]/10 px-3 py-1.5 rounded-xl">
+                          {item.progress}%
+                        </span>
                       </div>
-                  ))}
+                    ))}
                 </div>
               </div>
-
-              {/* Feedback */}
-              <form onSubmit={handleFeedbackSubmit} className="p-8 rounded-3xl bg-[#121824] border border-slate-800/80 space-y-5">
-                <h3 className="text-xl font-bold text-white">How is your experience so far?</h3>
-                <div className="flex gap-1.5 text-[#00f2fe]">
-                  {[...Array(5)].map((_, i) => (<Star key={i} className="w-6 h-6 fill-[#00f2fe]" />))}
-                </div>
-                {feedbackSuccess && (
-                  <div className="p-3 rounded-xl bg-teal-500/10 border border-teal-500/30 text-teal-400 text-xs flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4" /> Thank you for your feedback!
-                  </div>
-                )}
-                <textarea rows="4" placeholder="Tell us what's working..." value={feedbackText} onChange={(e) => setFeedbackText(e.target.value)} className="w-full bg-[#0b0f17] border border-slate-800 rounded-xl p-4 text-sm text-white resize-none outline-none"></textarea>
-                <button type="submit" className="px-6 py-3 bg-[#00f2fe] text-black font-bold rounded-xl text-sm">Submit Feedback</button>
-              </form>
 
             </div>
           </SignedIn>
         )}
       </main>
 
-      {/* CERTIFICATE MODAL */}
+      {/* Certificate Modal */}
       {activeCertificate && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="relative max-w-2xl w-full bg-[#121824] border border-[#00f2fe]/40 rounded-3xl p-8 md:p-12 text-center space-y-6 shadow-2xl">
-            <button onClick={() => setActiveCertificate(null)} className="absolute top-6 right-6 p-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white">
+            <button onClick={() => setActiveCertificate(null)} className="absolute top-6 right-6 p-2 rounded-xl bg-slate-800 text-slate-300">
               <X className="w-5 h-5" />
             </button>
-            <div className="w-16 h-16 rounded-2xl bg-[#00f2fe]/10 text-[#00f2fe] flex items-center justify-center mx-auto">
-              <Award className="w-8 h-8" />
-            </div>
-            <div>
-              <span className="text-xs font-mono text-[#00f2fe] uppercase tracking-widest block mb-2">OFFICIAL SKILLFORGE CERTIFICATE</span>
-              <h2 className="text-3xl font-extrabold text-white">Certificate of Completion</h2>
-            </div>
-            <p className="text-slate-300 text-sm">This is proudly presented to</p>
-            <h3 className="text-2xl md:text-3xl font-black text-[#00f2fe] tracking-wide">{activeCertificate.name}</h3>
-            <p className="text-slate-400 text-sm leading-relaxed max-w-lg mx-auto">
-              for successfully completing all milestones and building practical projects in the verified learning track: <br/>
-              <strong className="text-white">{activeCertificate.title}</strong>
-            </p>
-            <div className="pt-4 flex items-center justify-center gap-4">
-              <button onClick={() => alert("Certificate downloaded successfully!")} className="px-6 py-3 bg-[#00f2fe] text-black font-bold rounded-xl text-sm flex items-center gap-2 hover:bg-[#00dfed]">
-                <Award className="w-4 h-4" /> Download Certificate
-              </button>
-            </div>
+            <h2 className="text-3xl font-extrabold text-white">Certificate of Completion</h2>
+            <h3 className="text-2xl font-black text-[#00f2fe]">{activeCertificate.name}</h3>
+            <p className="text-slate-400 text-sm">Successfully completed <strong className="text-white">{activeCertificate.title}</strong></p>
           </div>
         </div>
       )}
