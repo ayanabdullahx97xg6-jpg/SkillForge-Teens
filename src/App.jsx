@@ -322,8 +322,8 @@ function MainContent() {
           <section className="relative px-6 pt-20 pb-32 text-center overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-b from-[#00f2fe]/10 via-transparent to-transparent pointer-events-none blur-3xl max-w-2xl mx-auto h-96"></div>
             <div className="inline-block px-4 py-1.5 mb-6 text-xs font-semibold tracking-wide text-[#00f2fe] uppercase bg-[#00f2fe]/10 border border-[#00f2fe]/30 rounded-full">
-              Cloud Database Powered by Firebase 🔥
-            </div>
+  ⚡ Build Your Future, One Skill at a Time
+</div>
             <h1 className="text-5xl md:text-7xl font-extrabold text-white tracking-tight max-w-4xl mx-auto mb-6 leading-tight">
               Discover Your Superpower <br className="hidden md:block"/>
               <span className="text-[#00f2fe]">– By Teens, For Teens</span>
