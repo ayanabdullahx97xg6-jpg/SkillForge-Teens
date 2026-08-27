@@ -1,375 +1,139 @@
-import React, { useState, useEffect } from 'react';
-import { Shield, Sparkles, BookOpen, Bot, ArrowRight, Star, Trophy, Users, CheckCircle, Award, X, Inbox, Trash2, User, Edit3, PlusCircle, Lock, Unlock } from 'lucide-react';
-import { ClerkProvider, SignedIn, SignedOut, SignInButton, SignUpButton, UserButton, useUser } from '@clerk/clerk-react';
-
-// Firebase Imports
-import { initializeApp } from "firebase/app";
-import { getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, deleteDoc } from "firebase/firestore";
-
-// Firebase Configuration Keys
-const firebaseConfig = {
-  apiKey: "AIzaSyAY0iT-cDOG88pN1c4zjW39aXo7Bfh46ws",
-  authDomain: "skillforge-teens.firebaseapp.com",
-  projectId: "skillforge-teens",
-  storageBucket: "skillforge-teens.firebasestorage.app",
-  messagingSenderId: "563140064594",
-  appId: "1:563140064594:web:148eaedbc95c5a50c1368b"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-
-const clerkPubKey = "pk_test_ZXZvbHZpbmctZG92ZS03MzA0LmNsZXJrLmFjY291bnRzLmRldiQ";
-const ADMIN_EMAIL = "ayanabdullahx967xg6@gmail.com"; 
+import React, { useState } from 'react';
+import { 
+  ArrowRight, 
+  Shield, 
+  Sparkles, 
+  BookOpen, 
+  CheckCircle, 
+  PlusCircle, 
+  Trash2, 
+  Trophy, 
+  Award, 
+  Users, 
+  X 
+} from 'lucide-react';
+import { SignedIn, SignedOut, SignInButton, UserButton, useUser } from '@clerk/clerk-react';
 
 export default function App() {
-  return (
-    <ClerkProvider publishableKey={clerkPubKey}>
-      <MainContent />
-    </ClerkProvider>
-  );
-}
-
-function MainContent() {
-  const [currentPage, setCurrentPage] = useState('home');
   const { user } = useUser();
-
-  const isAdmin = user && user.primaryEmailAddress?.emailAddress === ADMIN_EMAIL;
+  const [currentPage, setCurrentPage] = useState('home');
   const [isEditMode, setIsEditMode] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(true);
 
-  // Editable Site Content State (Synced with Firebase)
+  // Site Content State for Inline Editing
   const [siteContent, setSiteContent] = useState({
-    heroBadge: "⚡ Build Your Future, One Skill at a Time",
-    heroTitle: "Discover Your Superpower – By Teens, For Teens",
-    heroSubtitle: "SkillForge Teens helps you explore tech and creative skills with permanent cloud storage for your progress and certificates.",
-    howItWorksTitle: "01 / HOW IT WORKS",
-    howItWorksHeading: "From curious beginner to certified creator",
-    theWhyTitle: "03 / THE WHY",
-    theWhyHeading: "Why SkillForge Teens exists",
-    theWhyDesc: "We believe young minds deserve professional-grade tools, secure cloud tracking, and a community built specifically for their growth without distractions.",
-    buildFutureTitle: "04 / BUILD THE FUTURE TOGETHER",
-    buildFutureHeading: "Ready to start your journey?",
-    buildFutureDesc: "Join hundreds of teens learning cybersecurity, animation, AI prompting, and storytelling today."
+    heroBadge: 'Next-Gen Learning Platform',
+    heroTitle: 'Empowering Young Minds with Cloud Skills',
+    heroSubtitle: 'Explore cutting-edge tech tracks built specifically for teenagers.',
+    howItWorksTitle: '01 / HOW IT WORKS',
+    howItWorksHeading: 'Simple steps to master new skills',
+    theWhyTitle: '03 / THE WHY',
+    theWhyHeading: 'Built for the future of education',
+    theWhyDesc: 'We provide secure, cloud-synced learning paths designed to engage young creators and future tech leaders.',
+    buildFutureTitle: '04 / GET STARTED',
+    buildFutureHeading: 'Build the future together',
+    buildFutureDesc: 'Join thousands of students building real projects and earning verified certificates.'
   });
 
-  // Fetch Site Content from Firebase
-  useEffect(() => {
-    const fetchSiteContent = async () => {
-      try {
-        const docRef = doc(db, "settings", "siteContent");
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setSiteContent(docSnap.data());
-        }
-      } catch (e) {
-        console.log("Using default site content");
-      }
-    };
-    fetchSiteContent();
-  }, []);
-
-  const handleContentChange = async (key, value) => {
-    const updated = { ...siteContent, [key]: value };
-    setSiteContent(updated);
-    try {
-      await setDoc(doc(db, "settings", "siteContent"), updated);
-    } catch (e) {
-      console.error("Error saving content to Firebase", e);
-    }
+  const handleContentChange = (key, value) => {
+    setSiteContent((prev) => ({ ...prev, [key]: value }));
   };
 
-  // Default Courses Fallback
-  const defaultCourses = [
-    { id: 'cybersecurity', title: 'Cybersecurity & Safety', desc: 'Practice smart digital habits, understand encryption basics, and learn how to secure your online presence against modern threats.' },
-    { id: 'animation', title: '2D/3D Animation', desc: 'Bring original characters to life using industry-standard principles of motion, keyframing, and basic modeling.' },
-    { id: 'storytelling', title: 'Creative Storytelling', desc: 'Master the art of digital writing, script formatting, world-building, and engaging media production for modern platforms.' },
-    { id: 'aiTools', title: 'AI Tools & Prompting', desc: 'Learn how to leverage AI ethically, craft powerful prompts, generate creative assets, and supercharge your productivity.' },
-  ];
-
-  const [courses, setCourses] = useState(defaultCourses);
-
-  // Fetch Courses from Firebase
-  useEffect(() => {
-    const fetchCourses = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(db, "courses"));
-        if (!querySnapshot.empty) {
-          const loadedCourses = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          setCourses(loadedCourses);
-        }
-      } catch (e) {
-        console.log("Using default courses");
-      }
-    };
-    fetchCourses();
-  }, []);
-
-  // Admin New Course Form States
-  const [newCourseTitle, setNewCourseTitle] = useState('');
-  const [newCourseDesc, setNewCourseDesc] = useState('');
-  const [courseSuccess, setCourseSuccess] = useState(false);
-
-  const handlePublishCourse = async (e) => {
-    e.preventDefault();
-    if (!newCourseTitle || !newCourseDesc) return;
-
-    try {
-      const newDocRef = await addDoc(collection(db, "courses"), {
-        title: newCourseTitle,
-        desc: newCourseDesc
-      });
-
-      const newCourseObj = { id: newDocRef.id, title: newCourseTitle, desc: newCourseDesc };
-      const updatedCourses = [...courses, newCourseObj];
-      setCourses(updatedCourses);
-
-      setNewCourseTitle('');
-      setNewCourseDesc('');
-      setCourseSuccess(true);
-      setTimeout(() => setCourseSuccess(false), 4000);
-    } catch (error) {
-      alert("Error publishing course: " + error.message);
-    }
-  };
-
-  const deleteCourse = async (id) => {
-    try {
-      await deleteDoc(doc(db, "courses", id));
-      const filtered = courses.filter(c => c.id !== id);
-      setCourses(filtered);
-    } catch (error) {
-      alert("Error deleting course");
-    }
-  };
-
-  // Profile State
-  const [profile, setProfile] = useState({ fullName: '', age: '', bio: '' });
-  const [profileSuccess, setProfileSuccess] = useState(false);
-
-  useEffect(() => {
-    if (user) {
-      const fetchProfile = async () => {
-        try {
-          const docRef = doc(db, "profiles", user.id);
-          const docSnap = await getDoc(docRef);
-          if (docSnap.exists()) {
-            setProfile(docSnap.data());
-          } else {
-            setProfile({ fullName: user.firstName || '', age: '', bio: '' });
-          }
-        } catch (e) {
-          console.error("Error fetching profile");
-        }
-      };
-      fetchProfile();
-    }
-  }, [user]);
-
-  const handleProfileSave = async (e) => {
-    e.preventDefault();
-    if (!user) return;
-    try {
-      await setDoc(doc(db, "profiles", user.id), profile);
-      setProfileSuccess(true);
-      setTimeout(() => setProfileSuccess(false), 4000);
-
-      const userName = profile.fullName || user.firstName || 'Learner';
-      updateLeaderboardInStorage(user.id, userName, progress);
-    } catch (error) {
-      alert("Error saving profile");
-    }
-  };
-
-  // Leaderboard State
-  const [leaderboard, setLeaderboard] = useState([
-    { id: 'david', name: 'David', track: 'Cybersecurity & Safety', progress: 90 },
-    { id: 'ayesha', name: 'Ayesha', track: '2D/3D Animation', progress: 75 },
+  // Courses State
+  const [courses, setCourses] = useState([
+    { id: 'cyber', title: 'Cybersecurity Fundamentals', desc: 'Master online safety, encryption basics, and ethical hacking intro.' },
+    { id: 'animation', title: 'Digital Animation & Design', desc: 'Bring creative ideas to life using modern digital design tools.' },
+    { id: 'ai', title: 'AI Prompt Engineering', desc: 'Learn how to effectively communicate with AI models to build apps.' },
+    { id: 'storytelling', title: 'Interactive Storytelling', desc: 'Create immersive digital narratives and code your own choose-your-path games.' }
   ]);
 
-  // Dynamic User Progress State
-  const [progress, setProgress] = useState({});
-
-  useEffect(() => {
-    if (user) {
-      const fetchProgress = async () => {
-        try {
-          const docRef = doc(db, "progress", user.id);
-          const docSnap = await getDoc(docRef);
-          const userName = profile.fullName || user.firstName || user.username || 'Learner';
-          
-          if (docSnap.exists()) {
-            const parsedProgress = docSnap.data();
-            setProgress(parsedProgress);
-            updateLeaderboardInStorage(user.id, userName, parsedProgress);
-          }
-        } catch (e) {
-          console.error("Error fetching progress");
-        }
-      };
-      fetchProgress();
-    }
-  }, [user]);
-
-  const updateLeaderboardInStorage = (userId, userName, currentProgress) => {
-    const trackEntries = Object.entries(currentProgress);
-    if (trackEntries.length === 0) return;
-
-    let topTrackName = 'General Learning';
-    let topVal = 0;
-
-    trackEntries.forEach(([courseId, val]) => {
-      const found = courses.find(c => c.id === courseId);
-      if (found && val > topVal) {
-        topVal = val;
-        topTrackName = found.title;
-      }
-    });
-
-    setLeaderboard((prev) => {
-      const existingIndex = prev.findIndex((item) => item.id === userId);
-      let updated;
-      if (existingIndex > -1) {
-        updated = [...prev];
-        updated[existingIndex] = { id: userId, name: userName, track: topTrackName, progress: topVal };
-      } else {
-        updated = [...prev, { id: userId, name: userName, track: topTrackName, progress: topVal }];
-      }
-      return updated;
-    });
-  };
-
-  const updateProgress = async (courseId) => {
-    if (!user) return;
-    const currentVal = progress[courseId] || 0;
-    const updated = {
-      ...progress,
-      [courseId]: Math.min(100, currentVal + 10)
-    };
-    setProgress(updated);
-    
-    try {
-      await setDoc(doc(db, "progress", user.id), updated);
-      const userName = profile.fullName || user.firstName || user.username || 'Learner';
-      updateLeaderboardInStorage(user.id, userName, updated);
-    } catch (e) {
-      console.error("Error saving progress");
-    }
-  };
-
-  // Support Requests State (Admin Inbox)
-  const [supportRequests, setSupportRequests] = useState([]);
-
-  useEffect(() => {
-    const fetchSupport = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(db, "supportRequests"));
-        const tickets = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setSupportRequests(tickets);
-      } catch (e) {
-        console.log("Error loading support tickets");
-      }
-    };
-    fetchSupport();
-  }, []);
-
-  const [activeCertificate, setActiveCertificate] = useState(null);
-
-  // Support Form State
+  // Form & Interaction States
   const [supportName, setSupportName] = useState('');
   const [supportEmail, setSupportEmail] = useState('');
   const [supportMessage, setSupportMessage] = useState('');
   const [supportSuccess, setSupportSuccess] = useState(false);
 
-  const handleSupportSubmit = async (e) => {
-    e.preventDefault();
-    if (!supportName || !supportEmail || !supportMessage) return;
+  const [newCourseTitle, setNewCourseTitle] = useState('');
+  const [newCourseDesc, setNewCourseDesc] = useState('');
+  const [courseSuccess, setCourseSuccess] = useState(false);
 
-    try {
-      const newTicket = {
-        name: supportName,
-        email: supportEmail,
-        message: supportMessage,
-        date: new Date().toLocaleString()
-      };
-      const docRef = await addDoc(collection(db, "supportRequests"), newTicket);
-      setSupportRequests([{ id: docRef.id, ...newTicket }, ...supportRequests]);
-      
-      setSupportSuccess(true);
-      setSupportName('');
-      setSupportEmail('');
-      setSupportMessage('');
-      setTimeout(() => setSupportSuccess(false), 5000);
-    } catch (error) {
-      alert("Error sending support ticket");
-    }
+  const [supportRequests, setSupportRequests] = useState([
+    { id: '1', name: 'Alex Johnson', email: 'alex@example.com', date: '2026-06-01', message: 'How do I reset my password?' }
+  ]);
+
+  const [profile, setProfile] = useState({
+    fullName: user?.firstName || '',
+    age: '16',
+    bio: 'Passionate teen tech learner exploring code and design.'
+  });
+  const [profileSuccess, setProfileSuccess] = useState(false);
+
+  const [progress, setProgress] = useState({});
+  const [activeCertificate, setActiveCertificate] = useState(null);
+
+  const [leaderboard, setLeaderboard] = useState([
+    { id: 'u1', name: 'Sarah Connor', track: 'Cybersecurity', progress: 90 },
+    { id: 'u2', name: 'Neo Anderson', track: 'AI Prompt Engineering', progress: 100 },
+    { id: 'u3', name: 'Trinity Moss', track: 'Digital Animation', progress: 60 }
+  ]);
+
+  // Handlers
+  const handleSupportSubmit = (e) => {
+    e.preventDefault();
+    const newTicket = {
+      id: Date.now().toString(),
+      name: supportName,
+      email: supportEmail,
+      message: supportMessage,
+      date: new Date().toISOString().split('T')[0]
+    };
+    setSupportRequests([newTicket, ...supportRequests]);
+    setSupportSuccess(true);
+    setSupportName('');
+    setSupportEmail('');
+    setSupportMessage('');
+    setTimeout(() => setSupportSuccess(false), 4000);
   };
 
-  const deleteTicket = async (id) => {
-    try {
-      await deleteDoc(doc(db, "supportRequests", id));
-      const filtered = supportRequests.filter(item => item.id !== id);
-      setSupportRequests(filtered);
-    } catch (e) {
-      alert("Error deleting ticket");
-    }
+  const handlePublishCourse = (e) => {
+    e.preventDefault();
+    const newCourseItem = {
+      id: Date.now().toString(),
+      title: newCourseTitle,
+      desc: newCourseDesc
+    };
+    setCourses([...courses, newCourseItem]);
+    setCourseSuccess(true);
+    setNewCourseTitle('');
+    setNewCourseDesc('');
+    setTimeout(() => setCourseSuccess(false), 4000);
+  };
+
+  const deleteCourse = (id) => {
+    setCourses(courses.filter((c) => c.id !== id));
+  };
+
+  const deleteTicket = (id) => {
+    setSupportRequests(supportRequests.filter((t) => t.id !== id));
+  };
+
+  const handleProfileSave = (e) => {
+    e.preventDefault();
+    setProfileSuccess(true);
+    setTimeout(() => setProfileSuccess(false), 4000);
+  };
+
+  const updateProgress = (courseId) => {
+    setProgress((prev) => {
+      const current = prev[courseId] || 0;
+      const updated = current >= 100 ? 100 : current + 10;
+      return { ...prev, [courseId]: updated };
+    });
   };
 
   return (
-    <div className="min-h-screen bg-[#0b0f17] text-slate-100 font-sans selection:bg-[#00f2fe] selection:text-black antialiased relative">
+    <div className="min-h-screen bg-[#0b0f17] text-slate-100 font-sans selection:bg-[#00f2fe] selection:text-black">
       
-      {/* Framer-Style Admin Inline Edit Bar */}
-      {isAdmin && (
-        <div className="fixed bottom-6 right-6 z-50 bg-[#121824] border border-[#00f2fe] p-3 rounded-2xl shadow-2xl flex items-center gap-3">
-          <span className="text-xs font-mono text-[#00f2fe] px-2 font-bold">ADMIN EDIT MODE</span>
-          <button 
-            onClick={() => setIsEditMode(!isEditMode)}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${isEditMode ? 'bg-[#00f2fe] text-black' : 'bg-slate-800 text-white'}`}
-          >
-            {isEditMode ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-            {isEditMode ? 'Editing Active (Click texts to edit)' : 'Enable Edit Bar'}
-          </button>
-        </div>
-      )}
-
-      {/* Navigation Header */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0b0f17]/90 backdrop-blur-md border-b border-slate-800/60 px-8 h-20 flex items-center justify-between">
-        <div className="text-xl font-black tracking-wider text-white flex items-center gap-1 cursor-pointer" onClick={() => setCurrentPage('home')}>
-          SKILLFORGE <span className="text-[#00f2fe] font-mono">&lt;TEENS/&gt;</span>
-        </div>
-        <div className="flex gap-5 md:gap-7 text-sm font-medium text-slate-300 items-center">
-          <button onClick={() => setCurrentPage('home')} className={`hover:text-[#00f2fe] transition-colors ${currentPage === 'home' ? 'text-[#00f2fe]' : ''}`}>Home</button>
-          <button onClick={() => setCurrentPage('about')} className={`hover:text-[#00f2fe] transition-colors ${currentPage === 'about' ? 'text-[#00f2fe]' : ''}`}>About</button>
-          <button onClick={() => setCurrentPage('courses')} className={`hover:text-[#00f2fe] transition-colors ${currentPage === 'courses' ? 'text-[#00f2fe]' : ''}`}>Courses</button>
-          <button onClick={() => setCurrentPage('support')} className={`hover:text-[#00f2fe] transition-colors ${currentPage === 'support' ? 'text-[#00f2fe]' : ''}`}>Support</button>
-          
-          {isAdmin && (
-            <button onClick={() => setCurrentPage('admin')} className={`px-3 py-1.5 rounded-lg bg-teal-500/10 border border-teal-500/40 text-teal-400 font-bold flex items-center gap-1.5 text-xs ${currentPage === 'admin' ? 'bg-teal-500/20' : ''}`}>
-              <Inbox className="w-4 h-4" /> Admin Panel ({supportRequests.length})
-            </button>
-          )}
-
-          <SignedIn>
-            <div className="flex items-center gap-3">
-              <button onClick={() => setCurrentPage('dashboard')} className={`text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-800 ${currentPage === 'dashboard' ? 'border-[#00f2fe] text-[#00f2fe]' : 'text-slate-300'}`}>
-                Dashboard & Profile
-              </button>
-              <UserButton afterSignOutUrl="/" />
-            </div>
-          </SignedIn>
-
-          <SignedOut>
-            <div className="flex items-center gap-3">
-              <SignInButton mode="modal">
-                <button className="px-4 py-2 rounded-xl bg-[#121824] border border-slate-800 hover:border-[#00f2fe] transition-all text-xs font-semibold">Login</button>
-              </SignInButton>
-              <SignUpButton mode="modal">
-                <button className="px-4 py-2 rounded-xl bg-[#00f2fe] text-black font-bold transition-all text-xs hover:bg-[#00dfed]">Sign Up</button>
-              </SignUpButton>
-            </div>
-          </SignedOut>
-        </div>
-      </nav>
-
       {/* Main Content Area */}
       <main className="pt-20">
         
@@ -649,6 +413,7 @@ function MainContent() {
               <span className="text-xs font-mono text-[#00f2fe] tracking-widest uppercase block mb-3">HELP CENTER</span>
               <h1 className="text-4xl md:text-5xl font-extrabold text-white">How can we help you today?</h1>
             </div>
+
             <form onSubmit={handleSupportSubmit} className="p-8 md:p-10 rounded-3xl bg-[#121824] border border-slate-800/80 space-y-6">
               {supportSuccess && (
                 <div className="p-4 rounded-xl bg-teal-500/10 border border-teal-500/30 text-teal-400 text-sm flex items-center gap-2">
@@ -666,7 +431,6 @@ function MainContent() {
         {/* ADMIN PANEL */}
         {currentPage === 'admin' && isAdmin && (
           <div className="max-w-5xl mx-auto px-6 py-16 space-y-12">
-            
             <div className="p-8 rounded-3xl bg-[#121824] border border-teal-500/30 space-y-6">
               <div>
                 <span className="text-xs font-mono text-teal-400 uppercase tracking-widest block mb-1">ADMIN COURSE PUBLISHER</span>
@@ -757,7 +521,6 @@ function MainContent() {
                 )}
               </div>
             </div>
-
           </div>
         )}
 
@@ -765,7 +528,6 @@ function MainContent() {
         {currentPage === 'dashboard' && (
           <SignedIn>
             <div className="max-w-5xl mx-auto px-6 py-16 space-y-10">
-              
               <div className="p-8 rounded-3xl bg-[#121824] border border-slate-800/80 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div>
                   <span className="text-xs font-mono text-[#00f2fe] uppercase tracking-widest block mb-1">STUDENT CLOUD SPACE</span>
