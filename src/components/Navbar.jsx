@@ -8,11 +8,11 @@ import {
   createUserWithEmailAndPassword 
 } from 'firebase/auth';
 import { auth, googleProvider } from '../firebase';
-import { Edit3, ShieldCheck, LogOut, X, Mail, Lock } from 'lucide-react';
+import { ShieldCheck, LogOut, X, Mail, Lock } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 export default function Navbar() {
-  const { currentPage, setCurrentPage, isEditMode, setIsEditMode, isAdmin } = useApp();
+  const { currentPage, setCurrentPage } = useApp();
   const [user, setUser] = useState(null);
 
   // Modal State
@@ -30,14 +30,29 @@ export default function Navbar() {
     return () => unsubscribe();
   }, []);
 
-  // Handlers
+  // Strictly check if logged-in user is specific admin email
+  const isAdmin = user && user.email === 'ayanabdullahx967xg6@gmail.com';
+
+  const getFriendlyErrorMessage = (error) => {
+    if (error.code === 'auth/account-exists-with-different-credential') {
+      return 'Is email se kisi doosre provider se account bana hua hai.';
+    }
+    if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
+      return 'Email ya Password ghalat hai.';
+    }
+    if (error.code === 'auth/email-already-in-use') {
+      return 'Yeh email pehle se registered hai.';
+    }
+    return error.message.replace("Firebase: ", "");
+  };
+
   const handleGoogleSignIn = async () => {
     try {
       setAuthError('');
       await signInWithPopup(auth, googleProvider);
       setIsModalOpen(false);
     } catch (error) {
-      setAuthError(error.message);
+      setAuthError(getFriendlyErrorMessage(error));
     }
   };
 
@@ -48,7 +63,7 @@ export default function Navbar() {
       await signInWithPopup(auth, githubProvider);
       setIsModalOpen(false);
     } catch (error) {
-      setAuthError(error.message);
+      setAuthError(getFriendlyErrorMessage(error));
     }
   };
 
@@ -65,7 +80,7 @@ export default function Navbar() {
       setEmail('');
       setPassword('');
     } catch (error) {
-      setAuthError(error.message.replace("Firebase: ", ""));
+      setAuthError(getFriendlyErrorMessage(error));
     }
   };
 
@@ -113,6 +128,7 @@ export default function Navbar() {
             </button>
           )}
 
+          {/* Admin link only visible to specified admin email */}
           {isAdmin && (
             <button 
               onClick={() => setCurrentPage('admin')} 
@@ -120,22 +136,13 @@ export default function Navbar() {
                 currentPage === 'admin' ? 'text-teal-400 font-bold' : 'text-slate-400 hover:text-white'
               }`}
             >
-              <ShieldCheck className="w-4 h-4" /> Admin
+              <ShieldCheck className="w-4 h-4 text-[#00f2fe]" /> Admin
             </button>
           )}
         </div>
 
         {/* Right Controls */}
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => setIsEditMode(!isEditMode)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
-              isEditMode ? 'bg-[#00f2fe] text-black' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-            }`}
-          >
-            <Edit3 className="w-3.5 h-3.5" /> {isEditMode ? 'Editing On' : 'Inline Edit'}
-          </button>
-
           {user ? (
             <div className="flex items-center gap-3">
               <img 
@@ -167,7 +174,6 @@ export default function Navbar() {
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-[#121824] border border-slate-800 w-full max-w-md rounded-3xl p-6 relative shadow-2xl space-y-6">
             
-            {/* Close Button */}
             <button 
               onClick={() => { setIsModalOpen(false); setAuthError(''); }}
               className="absolute top-5 right-5 text-slate-400 hover:text-white transition-colors"
@@ -175,7 +181,6 @@ export default function Navbar() {
               <X className="w-5 h-5" />
             </button>
 
-            {/* Modal Title */}
             <div>
               <h3 className="text-2xl font-bold text-white">
                 {isSignUp ? 'Create an Account' : 'Welcome Back'}
@@ -191,7 +196,6 @@ export default function Navbar() {
               </div>
             )}
 
-            {/* Social Logins */}
             <div className="space-y-3">
               <button 
                 onClick={handleGoogleSignIn}
@@ -222,7 +226,6 @@ export default function Navbar() {
               <span className="bg-[#121824] px-3 text-[10px] text-slate-500 uppercase tracking-wider absolute">or</span>
             </div>
 
-            {/* Email Form */}
             <form onSubmit={handleEmailAuth} className="space-y-4">
               <div className="relative">
                 <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
@@ -256,7 +259,6 @@ export default function Navbar() {
               </button>
             </form>
 
-            {/* Switch Sign In / Sign Up */}
             <div className="text-center text-xs text-slate-400">
               {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
               <button 
