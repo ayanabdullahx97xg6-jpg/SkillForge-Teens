@@ -15,12 +15,10 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [success, setSuccess] = useState(false);
 
-  // Fetch Courses & User Profile/Progress from Firebase Firestore on Load
   useEffect(() => {
     const fetchData = async () => {
       if (!user) return;
       try {
-        // 1. Fetch Published Courses from Firestore
         const coursesSnap = await getDocs(collection(db, "courses"));
         const coursesList = coursesSnap.docs.map(doc => ({
           id: doc.id,
@@ -28,7 +26,6 @@ export default function Dashboard() {
         }));
         setCourses(coursesList);
 
-        // 2. Fetch User Profile & Progress from Firestore users collection
         const userDocRef = doc(db, "users", user.id);
         const userSnap = await getDoc(userDocRef);
 
@@ -58,7 +55,6 @@ export default function Dashboard() {
     fetchData();
   }, [user]);
 
-  // Save Profile Changes to Firebase Firestore
   const handleSave = async (e) => {
     e.preventDefault();
     if (!user) return;
@@ -81,7 +77,6 @@ export default function Dashboard() {
     }
   };
 
-  // Update Course Progress and Sync with Firebase
   const updateProgressFirebase = async (courseId) => {
     if (!user) return;
     
@@ -111,8 +106,6 @@ export default function Dashboard() {
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-16 space-y-10">
-      
-      {/* User Welcome Banner */}
       <div className="p-8 rounded-3xl bg-[#121824] border border-slate-800/80 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <span className="text-xs font-mono text-[#00f2fe] uppercase tracking-widest block mb-1">STUDENT CLOUD SPACE</span>
@@ -124,7 +117,6 @@ export default function Dashboard() {
         <UserButton afterSignOutUrl="/" />
       </div>
 
-      {/* Profile Setup Form */}
       <div className="p-8 rounded-3xl bg-[#121824] border border-slate-800/80 space-y-6">
         <h3 className="text-xl font-bold text-white">Profile Setup</h3>
         {success && (
@@ -166,7 +158,6 @@ export default function Dashboard() {
         </form>
       </div>
 
-      {/* Enrolled Tracks & Progress */}
       <div className="space-y-6">
         <h3 className="text-xl font-bold text-white flex items-center gap-2">
           <Trophy className="w-5 h-5 text-[#00f2fe]" /> Your Enrolled Tracks
@@ -207,7 +198,6 @@ export default function Dashboard() {
           })}
         </div>
       </div>
-
     </div>
   );
 }
