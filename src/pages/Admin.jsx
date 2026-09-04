@@ -1,5 +1,3 @@
-// File: src/pages/Admin.jsx
-
 import React, { useState, useEffect } from 'react';
 import { CheckCircle, PlusCircle, Trash2, ShieldAlert, ArrowLeft } from 'lucide-react';
 import { onAuthStateChanged } from 'firebase/auth';
