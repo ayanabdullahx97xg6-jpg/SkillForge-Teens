@@ -1,36 +1,90 @@
+// File: src/pages/Admin.jsx
+
 import React, { useState, useEffect } from 'react';
 import { CheckCircle, PlusCircle, Trash2, ShieldAlert, ArrowLeft } from 'lucide-react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '../firebase';
+import { auth, db } from '../firebase';
+import { collection, addDoc, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { useApp } from '../context/AppContext';
 
 export default function Admin() {
-  const { courses, setCourses, deleteCourse, supportRequests, deleteTicket, setCurrentPage } = useApp();
+  const { supportRequests, deleteTicket, setCurrentPage } = useApp();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  
+  // Form States
   const [title, setTitle] = useState('');
   const [desc, setDesc] = useState('');
+  const [level, setLevel] = useState('Beginner');
+  const [duration, setDuration] = useState('4 Weeks');
   const [success, setSuccess] = useState(false);
+
+  // Firestore Courses State
+  const [courses, setCourses] = useState([]);
 
   const ADMIN_EMAIL = 'ayanabdullahx967xg6@gmail.com';
 
+  // 1. Auth State Check & Fetch Courses from Firestore
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
+      
+      if (currentUser && currentUser.email === ADMIN_EMAIL) {
+        try {
+          const querySnapshot = await getDocs(collection(db, "courses"));
+          const coursesList = querySnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+          setCourses(coursesList);
+        } catch (error) {
+          console.error("Error fetching courses in Admin:", error);
+        }
+      }
       setLoading(false);
     });
+
     return () => unsubscribe();
   }, []);
 
-  const handlePublish = (e) => {
+  // 2. Publish New Course to Firebase Firestore
+  const handlePublish = async (e) => {
     e.preventDefault();
     if (!user || user.email !== ADMIN_EMAIL) return;
 
-    setCourses([...courses, { id: Date.now().toString(), title, desc }]);
-    setSuccess(true);
-    setTitle('');
-    setDesc('');
-    setTimeout(() => setSuccess(false), 4000);
+    try {
+      const newCourseData = {
+        title,
+        description: desc,
+        level,
+        duration,
+        modulescount: "10",
+        createdAt: new Date().toISOString()
+      };
+
+      const docRef = await addDoc(collection(db, "courses"), newCourseData);
+      
+      // Update local state so it shows up instantly
+      setCourses([...courses, { id: docRef.id, ...newCourseData }]);
+      setSuccess(true);
+      setTitle('');
+      setDesc('');
+      setTimeout(() => setSuccess(false), 4000);
+    } catch (error) {
+      console.error("Error publishing course: ", error);
+    }
+  };
+
+  // 3. Delete Course from Firestore
+  const handleDeleteCourse = async (courseId) => {
+    if (!window.confirm("Kya aap waqai is course ko delete karna chahte hain?")) return;
+
+    try {
+      await deleteDoc(doc(db, "courses", courseId));
+      setCourses(courses.filter(c => c.id !== courseId));
+    } catch (error) {
+      console.error("Error deleting course: ", error);
+    }
   };
 
   // Auth checking state
@@ -83,7 +137,7 @@ export default function Admin() {
         <h2 className="text-2xl font-extrabold text-white">Publish New Course</h2>
         {success && (
           <div className="p-4 rounded-xl bg-teal-500/10 border border-teal-500/30 text-teal-400 text-sm flex items-center gap-2">
-            <CheckCircle className="w-5 h-5" /> Course published successfully!
+            <CheckCircle className="w-5 h-5" /> Course published successfully to Firebase!
           </div>
         )}
         <form onSubmit={handlePublish} className="space-y-4">
@@ -103,6 +157,22 @@ export default function Admin() {
             className="w-full bg-[#0b0f17] border border-slate-800 rounded-xl p-4 text-sm text-white resize-none outline-none focus:border-[#00f2fe]"
             required
           ></textarea>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input
+              type="text"
+              placeholder="Level (e.g., Beginner)"
+              value={level}
+              onChange={(e) => setLevel(e.target.value)}
+              className="w-full bg-[#0b0f17] border border-slate-800 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-[#00f2fe]"
+            />
+            <input
+              type="text"
+              placeholder="Duration (e.g., 4 Weeks)"
+              value={duration}
+              onChange={(e) => setDuration(e.target.value)}
+              className="w-full bg-[#0b0f17] border border-slate-800 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-[#00f2fe]"
+            />
+          </div>
           <button
             type="submit"
             className="px-6 py-3.5 bg-[#00f2fe] hover:bg-[#00dfed] text-black font-bold rounded-xl text-sm flex items-center gap-2 transition-all shadow-md shadow-[#00f2fe]/10"
@@ -118,10 +188,10 @@ export default function Admin() {
             <div key={c.id} className="flex items-center justify-between p-4 rounded-2xl bg-[#0b0f17] border border-slate-800">
               <div>
                 <h4 className="text-sm font-bold text-white">{c.title}</h4>
-                <p className="text-xs text-slate-400 truncate max-w-md">{c.desc}</p>
+                <p className="text-xs text-slate-400 truncate max-w-md">{c.description || c.desc}</p>
               </div>
               <button
-                onClick={() => deleteCourse(c.id)}
+                onClick={() => handleDeleteCourse(c.id)}
                 className="p-2 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-all"
                 title="Delete Course"
               >
